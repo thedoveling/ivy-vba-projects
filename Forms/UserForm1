@@ -35,22 +35,3 @@ End Sub
 ' CommandButtonCancel: Name = "CommandButtonCancel", Caption = "Cancel"
 
 ' Module1
-Option Explicit
-
-Public Function GetUserCredentials() As Variant
-    Dim userID As String
-    Dim password As String
-    
-    ' Show the UserForm
-    UserForm1.Show vbModal
-    
-    ' Retrieve the user ID and password
-    userID = UserForm1.TextBoxUserID.Text
-    password = UserForm1.TextBoxPassword.Text
-    
-    ' Return the credentials as an array
-    GetUserCredentials = Array(userID, password)
-    
-    ' Unload the form
-    Unload UserForm1
-End Function

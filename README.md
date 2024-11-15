@@ -1,89 +1,30 @@
 # ivy-vba-projects
  Development for VBA projects. 
 
-
-Example of use: 
-Sub ExampleWorkflow()
-    Dim targetSheet As Worksheet
-    Dim rs As ADODB.Recordset
-    Dim dbManager As DatabaseManager
-    Dim logFile As String
-    Dim dataHandler As DataHandler
-    Dim citedVariables As Collection
-    Dim sqlQuery As String
-    Dim variable As String
-    Dim regex As Object
-    Dim matches As Object
-    Dim match As Object
-    
-    ' Initialize objects
-    Set targetSheet = ThisWorkbook.Sheets("Data")
-    Set dbManager = New DatabaseManager
-    Set dataHandler = New DataHandler
-    Set citedVariables = New Collection
-    logFile = ThisWorkbook.Path & "\error_log.txt"
-    
-    On Error GoTo ErrorHandler
-    
-    ' Disable events and screen updating
-    Call ErrorHandler.DisableEvents
-    
-    ' Define SQL query
-    sqlQuery = "SELECT field1, field2, field3 FROM YourTable WHERE Condition = 'Value'"
-    
-    ' Extract cited variables from SQL query
-    Set regex = CreateObject("VBScript.RegExp")
-    regex.Global = True
-    regex.IgnoreCase = True
-    regex.Pattern = "\b\w+\b"
-    Set matches = regex.Execute(sqlQuery)
-    
-    For Each match In matches
-        variable = match.Value
-        If Not IsInCollection(citedVariables, variable) Then
-            citedVariables.Add variable
-        End If
-    Next match
-    
-    ' Open database connection
-    If dbManager.OpenConnectionWithCredentials("password") Then
-        ' Execute query
-        Set rs = dbManager.ExecuteQuery(sqlQuery)
-        
-        ' Populate data with dynamic headers
-        Call dataHandler.PopulateData(targetSheet, rs)
-        
-        ' Apply configurations from the codebook
-        Call dataHandler.ApplyConfigurations(targetSheet, citedVariables)
-        
-        ' Close recordset and connection
-        rs.Close
-        dbManager.CloseConnection
-    Else
-        Call ErrorHandler.HandleError("Failed to open database connection.", logFile)
-    End If
-    
-    ' Enable events and screen updating
-    Call ErrorHandler.EnableEvents
-    
-    Exit Sub
-    
-ErrorHandler:
-    ' Handle runtime error
-    Call ErrorHandler.HandleRuntimeError(logFile)
-    ' Enable events and screen updating
-    Call ErrorHandler.EnableEvents
-    Resume Next
-End Sub
-
-' Checks if an item is in a collection
-' @param col - The collection
-' @param item - The item to check
-' @return - Boolean indicating if the item is in the collection
-Function IsInCollection(col As Collection, item As Variant) As Boolean
-    Dim var As Variant
-    On Error Resume Next
-    var = col(item)
-    IsInCollection = (Err.Number = 0)
-    On Error GoTo 0
-End Function
+Project Plan
+1. Establish Database Connection
+Status: Completed
+Description: Create a UserForm to collect user credentials (user ID and password) and establish a connection to the Oracle database using the DatabaseManager class.
+2. User Authentication
+Status: In Progress
+Description: Implement the UserManager class to validate user credentials against a predefined list or database.
+3. Dynamic Data Population
+Status: Planned
+Description: Use the DataHandler class to dynamically populate Excel sheets with data fetched from the Oracle database. Ensure headers and data are correctly formatted.
+4. Configuration Management
+Status: Planned
+Description: Implement the ConfigManager class to load and manage configurations from a codebook. Apply configurations dynamically based on the SQL query.
+5. Error Handling
+Status: Planned
+Description: Centralize error handling using the ErrorHandler module to ensure consistent and robust error management across the project.
+6. Transaction Management
+Status: Planned
+Description: Ensure that database transactions are only committed if all operations are successful. Implement transaction management in the DatabaseManager class.
+7. User Interface Enhancements
+Status: Planned
+Description: Improve the UserForm and other user interface elements to enhance user experience and usability.
+8. Documentation and Testing
+Status: Planned
+Description: Document the code and project thoroughly. Implement unit tests and perform comprehensive testing to ensure reliability and correctness.
+Summary
+This project aims to develop a robust and user-friendly VBA application that interacts with an Oracle database. The key components include user authentication, dynamic data population, configuration management, error handling, and transaction management. The project will be developed iteratively, with thorough documentation and testing at each stage.
