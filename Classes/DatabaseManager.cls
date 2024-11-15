@@ -1,29 +1,32 @@
 ' DatabaseManager.cls
 Option Explicit
 
-Private con As ADODB.connection
+Private con As ADODB.Connection
 
-' Opens a database connection using provided credentials.
-' @param the userid in the system environment - The user ID for the connection
+' Opens a database connection using the system environment user ID and provided password.
 ' @param password - The password for the connection
 ' @return - Boolean indicating success or failure
-' Opens a connection with userid and password credentials
-
 Public Function OpenConnectionWithCredentials(password As String) As Boolean
     On Error GoTo ConnectionError
     Dim connectionString As String
     
-    ' Define the connection string with userid and password
-    connectionString = "Provider=ORAOLEDB.ORACLE;Data Source=DEVVV;user id=" & Environ$("UserName") & ";" & "password=" & password & ";"
-    Set con = New ADODB.connection
+    ' Define the connection string with user ID from environment and provided password
+    connectionString = "Provider=ORAOLEDB.ORACLE;Data Source=DEVVV;User Id=" & Environ$("UserName") & ";Password=" & password & ";"
+    Set con = New ADODB.Connection
     
-    con.connectionString = connectionString
+    con.ConnectionString = connectionString
     con.Open
     OpenConnectionWithCredentials = True
     Exit Function
 
 ConnectionError:
     MsgBox "Error opening connection: " & Err.Description, vbCritical
+    If Not con Is Nothing Then
+        If con.State = adStateOpen Then
+            con.Close
+        End If
+        Set con = Nothing
+    End If
     OpenConnectionWithCredentials = False
 End Function
 
@@ -37,53 +40,30 @@ Public Sub CloseConnection()
     End If
 End Sub
 
-' Begins a transaction on the open connection.
-Public Sub BeginTransaction()
-    If Not con Is Nothing And con.State = adStateOpen Then
-        con.BeginTrans
-    End If
-End Sub
-
-' Commits the current transaction.
-Public Sub CommitTransaction()
-    If Not con Is Nothing And con.State = adStateOpen Then
-        con.CommitTrans
-    End If
-End Sub
-
-' Rolls back the current transaction.
-Public Sub RollbackTransaction()
-    If Not con Is Nothing And con.State = adStateOpen Then
-        con.RollbackTrans
-    End If
-End Sub
-
-' Executes a parameterized query within a transaction.
-' query: SQL query string.
-' params: Array of ADODB.Parameters for the query.
-' Returns: ADODB.Recordset or Nothing if not a select query.
-Public Function ExecuteQueryWithTransaction(query As String, ParamArray params() As Variant) As ADODB.Recordset
-    On Error GoTo ErrorHandler
+' Executes a SQL query and returns the result as a recordset.
+' @param sqlQuery - The SQL query to execute
+' @return - ADODB.Recordset containing the query result
+Public Function ExecuteQuery(sqlQuery As String) As ADODB.Recordset
+    On Error GoTo QueryError
+    Dim rs As ADODB.Recordset
+    Set rs = New ADODB.Recordset
     
-    Dim cmd As ADODB.Command
-    Set cmd = New ADODB.Command
-    cmd.ActiveConnection = con
-    cmd.CommandText = query
-    
-    ' Append parameters
-    Dim i As Integer
-    For i = LBound(params) To UBound(params)
-        cmd.Parameters.Append params(i)
-    Next i
-    
-    ' Execute the query and return result
-    Set ExecuteQueryWithTransaction = cmd.Execute
+    rs.Open sqlQuery, con, adOpenStatic, adLockReadOnly
+    Set ExecuteQuery = rs
     Exit Function
 
-ErrorHandler:
-    ' Rollback transaction and handle the error
-    Call RollbackTransaction
-    ErrorEventManager.HandleError Err.Description, "ExecuteQueryWithTransaction"
-    Set ExecuteQueryWithTransaction = Nothing
+QueryError:
+    MsgBox "Error executing query: " & Err.Description, vbCritical
+    Set ExecuteQuery = Nothing
 End Function
 
+' Creates a parameter for a command.
+' @param cmd - The command object
+' @param paramName - The name of the parameter
+' @param paramType - The type of the parameter
+' @param paramValue - The value of the parameter
+Public Sub CreateParameter(cmd As ADODB.Command, paramName As String, paramType As ADODB.DataTypeEnum, paramValue As Variant)
+    Dim param As ADODB.Parameter
+    Set param = cmd.CreateParameter(paramName, paramType, adParamInput, , paramValue)
+    cmd.Parameters.Append param
+End Sub

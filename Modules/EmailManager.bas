@@ -1,70 +1,33 @@
 ' EmailManager.bas
 Option Explicit
 
-' Creates email drafts in Outlook based on the specified worksheet data and configuration
-' @param ws - Worksheet containing data for placeholders
-' @param startRow - Starting row for data in the worksheet
-' @param config - Dictionary of configuration settings (To, CC, Subject Template, Body Template Path)
-Public Sub CreateEmailDrafts(ByRef ws As Worksheet, ByVal startRow As Long, ByRef config As Scripting.Dictionary)
-    Dim OutlookApp As Object
-    Dim MailItem As Object
-    Dim lastRow As Long, currentRow As Long
-    Dim subjectLine As String, bodyText As String, fieldName As String
-    Dim placeholderValue As String
-
-    ' Initialize Outlook application
-    Set OutlookApp = CreateObject("Outlook.Application")
-    
-    ' Find the last row with data
-    lastRow = ws.Cells(ws.Rows.Count, 1).End(xlUp).row
-
-    ' Loop through each row to create email drafts
-    For currentRow = startRow To lastRow
-        ' Create a new mail item from the specified template
-        Set MailItem = OutlookApp.CreateItem(0)
-        
-        ' Populate To, CC, and Subject using external config or defaults in the template
-        MailItem.To = config("To")
-        MailItem.CC = config("CC")
-        subjectLine = config("SubjectTemplate")
-        
-        ' Replace subject placeholders with worksheet values
-        For Each fieldName In config.Keys
-            If Not IsError(Application.Match(fieldName, ws.Rows(HEADER_ROW), 0)) Then
-                placeholderValue = ws.Cells(currentRow, Application.Match(fieldName, ws.Rows(HEADER_ROW), 0)).value
-                subjectLine = Replace(subjectLine, "[" & fieldName & "]", placeholderValue)
-            End If
-        Next fieldName
-        MailItem.Subject = subjectLine
-        
-        ' Load body from template file
-        bodyText = GetTemplateContent(config("BodyTemplatePath"))
-        For Each fieldName In config.Keys
-            If Not IsError(Application.Match(fieldName, ws.Rows(HEADER_ROW), 0)) Then
-                placeholderValue = ws.Cells(currentRow, Application.Match(fieldName, ws.Rows(HEADER_ROW), 0)).value
-                bodyText = Replace(bodyText, "[" & fieldName & "]", placeholderValue)
-            End If
-        Next fieldName
-        MailItem.HTMLBody = bodyText
-
-        ' Save the draft
-        MailItem.Save
-    Next currentRow
-End Sub
-
-' Helper function to retrieve template content from a file
-' @param filePath - Path to the text/HTML file
-' @return - Content of the template as string
-Private Function GetTemplateContent(filePath As String) As String
-    Dim fileContent As String
-    Dim fileNum As Integer
-    
-    On Error Resume Next
-    fileNum = FreeFile
-    Open filePath For Input As fileNum
-    If Err.Number = 0 Then
-        fileContent = Input$(LOF(fileNum), fileNum)
-    End If
-    Close fileNum
-    GetTemplateContent = fileContent
+' Creates an email draft with placeholder replacements.
+' @param placeholders - A dictionary of placeholders and their replacements
+' @param emailBody - The email body template
+' @return - The email body with placeholders replaced
+Public Function CreateEmailDraft(placeholders As Scripting.Dictionary, emailBody As String) As String
+    Dim placeholder As Variant
+    For Each placeholder In placeholders.Keys
+        emailBody = Replace(emailBody, placeholder, placeholders(placeholder))
+    Next placeholder
+    CreateEmailDraft = emailBody
 End Function
+
+' Sends an email using Outlook.
+' @param toAddress - The recipient's email address
+' @param subject - The email subject
+' @param body - The email body
+Public Sub SendEmail(toAddress As String, subject As String, body As String)
+    Dim outlookApp As Object
+    Dim mailItem As Object
+    
+    Set outlookApp = CreateObject("Outlook.Application")
+    Set mailItem = outlookApp.CreateItem(0)
+    
+    With mailItem
+        .To = toAddress
+        .Subject = subject
+        .Body = body
+        .Send
+    End With
+End Sub
