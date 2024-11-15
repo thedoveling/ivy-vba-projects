@@ -1,0 +1,56 @@
+' UserForm1
+Option Explicit
+
+Private Sub CommandButtonOK_Click()
+    ' Validate input
+    If Me.TextBoxUserID.Text = "" Or Me.TextBoxPassword.Text = "" Then
+        MsgBox "Please enter both User ID and Password.", vbExclamation
+        Exit Sub
+    End If
+    
+    ' Hide the form
+    Me.Hide
+End Sub
+
+Private Sub CommandButtonCancel_Click()
+    ' Clear input and hide the form
+    Me.TextBoxUserID.Text = ""
+    Me.TextBoxPassword.Text = ""
+    Me.Hide
+End Sub
+
+
+' UserForm Controls
+' Labels:
+
+' Label1: Caption = "User ID"
+' Label2: Caption = "Password"
+' TextBoxes:
+
+' TextBoxUserID: Name = "TextBoxUserID"
+' TextBoxPassword: Name = "TextBoxPassword", PasswordChar = *
+' CommandButtons:
+
+' CommandButtonOK: Name = "CommandButtonOK", Caption = "OK"
+' CommandButtonCancel: Name = "CommandButtonCancel", Caption = "Cancel"
+
+' Module1
+Option Explicit
+
+Public Function GetUserCredentials() As Variant
+    Dim userID As String
+    Dim password As String
+    
+    ' Show the UserForm
+    UserForm1.Show vbModal
+    
+    ' Retrieve the user ID and password
+    userID = UserForm1.TextBoxUserID.Text
+    password = UserForm1.TextBoxPassword.Text
+    
+    ' Return the credentials as an array
+    GetUserCredentials = Array(userID, password)
+    
+    ' Unload the form
+    Unload UserForm1
+End Function
