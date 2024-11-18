@@ -2,43 +2,89 @@
 Option Explicit
 
 Private con As ADODB.Connection
+Private encryptedPassword As String
+Private userID As String
 
-' Opens a database connection using the system environment user ID and provided password.
-' @param password - The password for the connection
-' @return - Boolean indicating success or failure
-Public Function OpenConnectionWithCredentials(password As String) As Boolean
+' Sets the user credentials and encrypts the password.
+Public Sub SetCredentials(ByVal user As String, ByVal pass As String)
+    userID = user
+    encryptedPassword = Encrypt(pass) ' Store encrypted password
+End Sub
+
+' Decrypts the stored password for use.
+Private Function GetDecryptedPassword() As String
+    GetDecryptedPassword = Decrypt(encryptedPassword)
+End Function
+
+' Opens a database connection using the stored credentials.
+Public Function OpenConnection() As Boolean
     On Error GoTo ConnectionError
     Dim connectionString As String
-    
-    ' Define the connection string with user ID from environment and provided password
-    connectionString = "Provider=ORAOLEDB.ORACLE;Data Source=DEVVV;User Id=" & Environ$("UserName") & ";Password=" & password & ";"
+    Dim password As String
+
+    ' Ensure credentials are set
+    If userID = vbNullString Or encryptedPassword = vbNullString Then
+        MsgBox "Error: User credentials are not set.", vbCritical
+        OpenConnection = False
+        Exit Function
+    End If
+
+    ' Decrypt password
+    password = GetDecryptedPassword()
+
+    ' Build and open the connection
+    connectionString = "Provider=ORAOLEDB.ORACLE;" & _
+                       "Data Source=DEVVV;" & _
+                       "User Id=" & userID & ";" & _
+                       "Password=" & password & ";"
     Set con = New ADODB.Connection
-    
     con.ConnectionString = connectionString
     con.Open
-    OpenConnectionWithCredentials = True
+
+    OpenConnection = True
     Exit Function
 
 ConnectionError:
     MsgBox "Error opening connection: " & Err.Description, vbCritical
     If Not con Is Nothing Then
-        If con.State = adStateOpen Then
-            con.Close
-        End If
+        If con.State = adStateOpen Then con.Close
         Set con = Nothing
     End If
-    OpenConnectionWithCredentials = False
+    OpenConnection = False
 End Function
+
+' Clears stored credentials.
+Public Sub ClearCredentials()
+    userID = vbNullString
+    encryptedPassword = vbNullString
+End Sub
 
 ' Closes the database connection if open.
 Public Sub CloseConnection()
-    If Not con Is Nothing Then
-        If con.State = adStateOpen Then
-            con.Close
-        End If
+    If Not con Is Nothing And con.State = adStateOpen Then
+        con.Close
         Set con = Nothing
     End If
 End Sub
+
+' Encrypts a string (simple XOR encryption).
+Private Function Encrypt(input As String) As String
+    Dim i As Long
+    Dim result As String
+    Dim key As Byte
+    key = 42 ' Simple XOR key
+
+    For i = 1 To Len(input)
+        result = result & Chr(Asc(Mid(input, i, 1)) Xor key)
+    Next i
+    Encrypt = result
+End Function
+
+' Decrypts a string (simple XOR decryption).
+Private Function Decrypt(input As String) As String
+    Decrypt = Encrypt(input) ' XOR is symmetric
+End Function
+
 
 ' Returns the active connection.
 Public Function GetConnection() As ADODB.Connection
@@ -102,7 +148,8 @@ End Sub
 Public Function ExecuteCommandQuery(cmd As ADODB.Command) As ADODB.Recordset
     On Error GoTo QueryError
     Dim rs As ADODB.Recordset
-    Set rs = cmd.Execute
+    Set rs = New ADODB.Recordset
+    rs.Open cmd, , adOpenStatic, adLockReadOnly
     Set ExecuteCommandQuery = rs
     Exit Function
 

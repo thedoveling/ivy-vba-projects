@@ -6,27 +6,32 @@ Private dataValidationConfigs As Scripting.Dictionary
 Private fieldOptions As Scripting.Dictionary
 Private tooltips As Scripting.Dictionary
 
-Private con As ADODB.Connection
-Private dbManager As New DatabaseManager
+Private dbManager As DatabaseManager
 
 ' Initializes the ConfigManager by loading configurations from Oracle and local configuration file.
 ' @param tableName - The name of the table to load configurations for
 ' @param sqlQuery - The SQL query to execute for loading configurations
-Public Sub Initialize(tableName As String, sqlQuery As String)
+Public Sub Initialize(tableName As String, sqlQuery As String, dbManager As DatabaseManager)
     Set columnMappings = New Scripting.Dictionary
     Set dataValidationConfigs = New Scripting.Dictionary
     Set fieldOptions = New Scripting.Dictionary
     Set tooltips = New Scripting.Dictionary
     
+    ' Set the DatabaseManager instance
+    Set Me.dbManager = dbManager
+    
     ' Open database connection
-    If dbManager.OpenConnectionWithCredentials("password") Then
+    If dbManager.OpenConnection() Then
         ' Load configurations from Oracle
         Call LoadConfigurationsFromOracle(tableName, sqlQuery)
-    
+        
         ' Load field options and tooltips from local configuration file
         Call LoadLocalConfigurations
+        
+        ' Close database connection
+        dbManager.CloseConnection
     Else
-        MsgBox "Error initializing ConfigManager: Unable to open database connection.", vbCritical
+        MsgBox "Failed to open database connection.", vbCritical
     End If
 End Sub
 

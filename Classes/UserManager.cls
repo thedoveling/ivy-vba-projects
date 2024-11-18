@@ -18,3 +18,11 @@ End Function
 Public Function GetCurrentUsername() As String
     GetCurrentUsername = Environ$("UserName")
 End Function
+
+Sub LogoutUser()
+    Dim dbManager As DatabaseManager
+    Set dbManager = New DatabaseManager
+
+    dbManager.CloseConnection
+    MsgBox "You have been logged out.", vbInformation
+End Sub

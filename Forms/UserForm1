@@ -3,13 +3,7 @@ Option Explicit
 
 Private Sub CommandButtonOK_Click()
     ' Validate input
-    If Me.TextBoxUserID.Text = "" Or Me.TextBoxPassword.Text = "" Then
-        MsgBox "Please enter both User ID and Password.", vbExclamation
-        Exit Sub
-    End If
-    
-    ' Hide the form
-    Me.Hide
+    Call UserFormModule.LoginUser
 End Sub
 
 Private Sub CommandButtonCancel_Click()

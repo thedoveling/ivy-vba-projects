@@ -1,71 +1,55 @@
-' UnitTest_ConfigManager.bas
+
+' MainModule.bas
 Option Explicit
 
-Public Sub Test_ConfigManager()
-    Dim configManager As ConfigManager
-    Dim columnMappings As Object, dataValidationConfigs As Object
-    Dim fieldOptions As Object, tooltips As Object
-    Dim tableName As String
-    Dim sqlQuery As String
-
-    ' Define the table name and SQL query
-    tableName = "YOUR_TABLE_NAME"
-    sqlQuery = "SELECT column_name AS variable, data_type AS datatype FROM all_tab_columns WHERE table_name = '" & tableName & "'"
-    
-    ' Initialize ConfigManager
-    Set configManager = New ConfigManager
-    configManager.Initialize tableName, sqlQuery
-    ' Fetch dynamically loaded data
-    Set columnMappings = configManager.GetColumnMappings()
-    Set dataValidationConfigs = configManager.GetDataValidationConfigs()
-    Set fieldOptions = configManager.GetFieldOptions()
-    Set tooltips = configManager.GetTooltips()
-
-    ' Assertions (mock data checks)
-    Debug.Assert Not columnMappings Is Nothing
-    Debug.Assert Not dataValidationConfigs Is Nothing
-    Debug.Assert Not fieldOptions Is Nothing
-    Debug.Assert Not tooltips Is Nothing
-
-    ' Check for specific mock values
-    Debug.Assert columnMappings.Exists("variable") ' Check Oracle-loaded variable
-    Debug.Assert fieldOptions.Exists("variable")    ' Check local Config variable
-    Debug.Print "Test_ConfigManager passed."
-End Sub
-
-
-' TestModule.bas
-Option Explicit
-
-Public Sub TestOracleConnection()
+Public Sub MainWorkflow()
     Dim dbManager As DatabaseManager
+    Dim dataHandler As DataHandler
+    Dim configManager As ConfigManager
     Dim rs As ADODB.Recordset
     Dim sqlQuery As String
+    Dim userID As String
+    Dim password As String
+    Dim tableName As String
     
-    ' Define your SQL query to pull one record
-    sqlQuery = "SELECT * FROM YOUR_TABLE_NAME WHERE ID = '124'"
+    ' Define your SQL query and table name
+    tableName = "YOUR_TABLE_NAME"
+    sqlQuery = "SELECT * FROM " & tableName & " WHERE ID = '124'"
     
     ' Initialize DatabaseManager
     Set dbManager = New DatabaseManager
     
     ' Open database connection
-    If dbManager.OpenConnectionWithCredentials("password") Then
+    If dbManager.OpenConnection Then
         ' Execute SQL query and get recordset
         Set rs = dbManager.ExecuteCommandQuery(dbManager.CreateCommand(sqlQuery, dbManager.GetConnection))
         
-        ' Print the result to the Immediate Window
-        If Not rs.EOF Then
-            Debug.Print "ID: " & rs.Fields("ID").Value
-            Debug.Print "OtherField: " & rs.Fields("OtherField").Value ' Replace with actual field names
-        Else
-            Debug.Print "No records found."
-        End If
+        ' Initialize ConfigManager
+        Set configManager = New ConfigManager
+        configManager.Initialize tableName, "SELECT column_name AS variable, data_type AS datatype FROM all_tab_columns WHERE table_name = '" & tableName & "'", userID, password
+        
+        ' Initialize DataHandler
+        Set dataHandler = New DataHandler
+        
+        ' Populate data as a table and apply configurations
+        dataHandler.PopulateData rs
+        
+        ' Apply additional configurations (data validation and tooltips)
+        Dim citedVariables As Collection
+        Set citedVariables = New Collection
+        Dim col As Long
+        For col = 0 To rs.Fields.Count - 1
+            citedVariables.Add rs.Fields(col).Name
+        Next col
+        dataHandler.ApplyConfigurations citedVariables
         
         ' Close recordset and connection
         rs.Close
         dbManager.CloseConnection
+        
+        MsgBox "Data populated and configured successfully!", vbInformation
     Else
-        Debug.Print "Connection failed."
+        MsgBox "Connection failed.", vbCritical
     End If
 End Sub
 
