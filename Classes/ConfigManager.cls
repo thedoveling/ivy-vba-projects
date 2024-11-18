@@ -12,18 +12,28 @@ Private dbManager As DatabaseManager
 ' @param tableName - The name of the table to load configurations for
 ' @param sqlQuery - The SQL query to execute for loading configurations
 Public Sub Initialize(tableName As String, sqlQuery As String, dbManager As DatabaseManager)
+    Dim metadataQuery As String
+    Dim rs As ADODB.Recordset
+
     Set columnMappings = New Scripting.Dictionary
     Set dataValidationConfigs = New Scripting.Dictionary
     Set fieldOptions = New Scripting.Dictionary
     Set tooltips = New Scripting.Dictionary
     
     ' Set the DatabaseManager instance
-    Set Me.dbManager = dbManager
+    Set dbManager = New DatabaseManager
+
+    ' Build a default SQL query if one is not provided
+    If sqlQuery = "" Then
+        metadataQuery = "SELECT COLUMN_NAME, DATA_TYPE FROM USER_TAB_COLUMNS WHERE TABLE_NAME = '" & tableName & "'"
+    Else
+        metadataQuery = sqlQuery
+    End If
     
     ' Open database connection
     If dbManager.OpenConnection Then
         ' Load configurations from Oracle
-        Call LoadConfigurationsFromOracle(tableName, sqlQuery)
+        Call LoadConfigurationsFromOracle(tableName)
         
         ' Load field options and tooltips from local configuration file
         Call LoadLocalConfigurations
@@ -62,37 +72,40 @@ End Function
 ' Loads configurations from Oracle.
 ' @param tableName - The name of the table to load configurations for
 ' @param sqlQuery - The SQL query to execute for loading configurations
-Private Sub LoadConfigurationsFromOracle(tableName As String, sqlQuery As String)
+
+' Dynamically builds and executes the metadata query to load configurations from Oracle.
+' @param tableName - The name of the table to load configurations for
+Private Sub LoadConfigurationsFromOracle(tableName As String)
     Dim rs As ADODB.Recordset
-    Dim variable As String
-    Dim header As String
-    Dim datatype As String
-    
+    Dim columnName As String
+    Dim dataType As String
+    Dim metadataQuery As String
+
     On Error GoTo LoadError
-    
-    ' Execute the provided SQL query to get configurations from Oracle
-    Set rs = dbManager.ExecuteCommandQuery(dbManager.CreateCommand(sqlQuery, dbManager.GetConnection))
-    
-    ' Load configurations from the recordset
-    Do While Not rs.EOF
-        variable = rs.Fields("variable").Value
-        header = variable ' Assuming header is the same as variable
-        datatype = rs.Fields("datatype").Value
-        
-        ' Populate dictionaries dynamically
-        If Not columnMappings.Exists(variable) Then columnMappings(variable) = header
-        If Not dataValidationConfigs.Exists(variable) Then dataValidationConfigs(variable) = datatype
-        
-        rs.MoveNext
-    Loop
-    
-    rs.Close
-    Set rs = Nothing
-    
-    ' Close database connection
-    con.Close
-    Set con = Nothing
-    
+
+    ' Dynamically build the query
+    metadataQuery = "SELECT COLUMN_NAME, DATA_TYPE FROM USER_TAB_COLUMNS WHERE TABLE_NAME = '" & tableName & "'"
+
+    ' Execute the query
+    Set rs = dbManager.ExecuteCommandQuery(dbManager.CreateCommand(metadataQuery, dbManager.GetConnection))
+
+    ' Process the recordset to populate mappings and configurations
+    If Not rs Is Nothing Then
+        Do While Not rs.EOF
+            columnName = rs.Fields("COLUMN_NAME").Value
+            dataType = rs.Fields("DATA_TYPE").Value
+
+            ' Populate column mappings
+            If Not columnMappings.Exists(columnName) Then columnMappings.Add columnName, columnName ' Default: column name is the friendly name
+
+            ' Populate data validation configurations
+            If Not dataValidationConfigs.Exists(columnName) Then dataValidationConfigs.Add columnName, dataType ' Use data type for validation rules
+
+            rs.MoveNext
+        Loop
+        rs.Close
+    End If
+
     Exit Sub
 
 LoadError:

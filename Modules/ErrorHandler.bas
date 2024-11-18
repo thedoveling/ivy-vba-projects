@@ -18,9 +18,8 @@ End Sub
 ' @param customMessage - Custom error message (optional)
 Public Sub HandleRuntimeError(Optional customMessage As String = "")
     Dim errMsg As String
-    errMsg = "Error " & Err.Number & ": " & Err.Description & " in " & _
-             VBA.Application.VBE.ActiveCodePane.CodeModule & " at line " & Erl
-    
+    errMsg = "Runtime Error " & Err.Number & ": " & Err.Description & " at line " & Erl
+
     If customMessage <> "" Then
         errMsg = customMessage & vbCrLf & errMsg
     End If

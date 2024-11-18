@@ -11,13 +11,16 @@ Public Sub PopulateData(rs As ADODB.Recordset)
     Dim tbl As ListObject
     Dim tblRange As Range
     Dim configManager As ConfigManager
+    Dim dbManager As DatabaseManager ' Define DatabaseManager instance
     Dim lastRow As Long, lastCol As Long
     Dim tableName As String
-    Dim sqlQuery As String
 
+    ' Initialize DatabaseManager
+    Set dbManager = New DatabaseManager
+    
     ' Initialize ConfigManager
     Set configManager = New ConfigManager
-    configManager.Initialize tableName, sqlQuery
+    configManager.Initialize tableName, "", dbManager ' Pass empty SQL string to let configmanager build dynamically
 
     ' Get the target sheet
     Set targetSheet = ThisWorkbook.Sheets(DATA_SHEET_NAME)
