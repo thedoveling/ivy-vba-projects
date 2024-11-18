@@ -5,25 +5,26 @@ Public Sub OpenUserForm()
     UserForm1.Show
 End Sub
 
-' Handles the login process when the user clicks the login button.
+' UserFormModule
 Sub LoginUser()
-    Dim dbManager As DatabaseManager
-    Set dbManager = New DatabaseManager
-    
-    ' Open the connection and check if login is successful
+    Dim dbManager As New DatabaseManager
+
+    ' Set credentials from user form
+    dbManager.SetCredentials UserForm1.UserIDTextBox.Value, UserForm1.PasswordTextBox.Value
+
+    ' Try to open connection
     If dbManager.OpenConnection Then
         MsgBox "Login successful!", vbInformation
-        ' Close the UserForm
         UserForm1.Hide
     Else
-        MsgBox "Login failed!", vbCritical
+        MsgBox "Login failed! Please check your credentials.", vbCritical
     End If
 End Sub
 
 Sub LogoutUser()
-    Dim dbManager As DatabaseManager
-    Set dbManager = New DatabaseManager
+    Dim dbManager As New DatabaseManager
 
+    ' Close connection and notify user
     dbManager.CloseConnection
     MsgBox "You have been logged out.", vbInformation
 End Sub

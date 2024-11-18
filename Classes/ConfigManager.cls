@@ -7,16 +7,17 @@ Private dbManager As DatabaseManager
 ' Initializes the configuration manager.
 ' @param tableName - The table name to fetch metadata for.
 ' @param dbManager - The database manager instance.
-Public Sub Initialize(tableName As String, dbManager As DatabaseManager)
+Public Sub Initialize(tableName As String, dbManager As DatabaseManager, Optional skipMetadata As Boolean = False)
     If Not dbManager.IsConnected Then
         Err.Raise vbObjectError + 1, "ConfigManager", "Database connection is not open."
     End If
-
     ' Set DatabaseManager instance
     Set Me.dbManager = dbManager
 
-    ' Load metadata configurations
-    Call LoadConfigurationsFromOracle(tableName)
+    If Not skipMetadata Then
+        ' Load metadata configurations
+        Call LoadConfigurationsFromOracle(tableName)
+    End If
 End Sub
 
 ' Loads metadata configurations from Oracle.

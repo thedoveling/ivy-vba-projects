@@ -2,6 +2,18 @@
 Option Explicit
 
 Private con As ADODB.Connection
+Private userID As String
+Private password As String
+
+Private transactionInProgress As Boolean
+
+' Sets user credentials.
+' @param uID - The user ID
+' @param pwd - The password
+Public Sub SetCredentials(uID As String, pwd As String)
+    userID = uID
+    password = pwd
+End Sub
 
 ' Opens a database connection using the globally stored credentials.
 Public Function OpenConnection() As Boolean
@@ -13,8 +25,8 @@ Public Function OpenConnection() As Boolean
         Dim connectionString As String
         connectionString = "Provider=ORAOLEDB.ORACLE;" & _
                            "Data Source=DEVVV;" & _
-                           "User Id=" & UserID & ";" & _
-                           "Password=" & Password & ";"
+                           "User Id=" & userID & ";" & _
+                           "Password=" & password & ";"
         Set con = New ADODB.Connection
         con.ConnectionString = connectionString
         con.Open
@@ -34,14 +46,58 @@ End Function
 
 ' Checks if the connection is active.
 Public Function IsConnected() As Boolean
+    On Error Resume Next ' Suppress errors during the check
     IsConnected = Not con Is Nothing And con.State = adStateOpen
+    On Error GoTo 0 ' Restore normal error handling
 End Function
 
 ' Closes the database connection.
 Public Sub CloseConnection()
     If IsConnected Then
+        If transactionInProgress Then
+            MsgBox "Warning: Closing connection with an active transaction. Rolling back changes.", vbExclamation
+            RollbackTransaction
+        End If
         con.Close
         Set con = Nothing
+    End If
+End Sub
+
+' Begins a transaction.
+Public Sub BeginTransaction()
+    If IsConnected Then
+        If transactionInProgress Then
+            MsgBox "Transaction already in progress.", vbExclamation
+        Else
+            con.BeginTrans
+            transactionInProgress = True
+        End If
+    Else
+        MsgBox "Cannot start a transaction. Database connection is not open.", vbCritical
+    End If
+End Sub
+
+' Commits the current transaction.
+Public Sub CommitTransaction()
+    If IsConnected And transactionInProgress Then
+        con.CommitTrans
+        transactionInProgress = False
+    ElseIf Not transactionInProgress Then
+        MsgBox "No transaction to commit.", vbExclamation
+    Else
+        MsgBox "Cannot commit. Database connection is not open.", vbCritical
+    End If
+End Sub
+
+' Rolls back the current transaction.
+Public Sub RollbackTransaction()
+    If IsConnected And transactionInProgress Then
+        con.RollbackTrans
+        transactionInProgress = False
+    ElseIf Not transactionInProgress Then
+        MsgBox "No transaction to roll back.", vbExclamation
+    Else
+        MsgBox "Cannot roll back. Database connection is not open.", vbCritical
     End If
 End Sub
 
@@ -55,49 +111,74 @@ Public Function GetConnection() As ADODB.Connection
     End If
 End Function
 
+' Executes a SELECT query and returns a recordset.
+Public Function ExecuteQuery(sqlText As String) As ADODB.Recordset
+    Dim cmd As ADODB.Command
+    Dim rs As ADODB.Recordset
+    On Error GoTo QueryError
 
-' Clears stored credentials.
-Public Sub ClearCredentials()
-    userID = vbNullString
-    password = vbNullString
-End Sub
+    ' Create and execute the command
+    Set cmd = CreateCommand(sqlText, GetConnection)
+    Set rs = New ADODB.Recordset
+    rs.Open cmd, , adOpenStatic, adLockReadOnly
 
-' Closes the database connection if open.
-Public Sub CloseConnection()
-    If Not con Is Nothing And con.State = adStateOpen Then
-        con.Close
-        Set con = Nothing
+    Set ExecuteQuery = rs
+    Exit Function
+
+QueryError:
+    MsgBox "Error executing query: " & Err.Description & vbCrLf & "SQL: " & sqlText, vbCritical
+    Set ExecuteQuery = Nothing
+End Function
+
+' For SQL calls with multiple tables
+Sub ExecuteJoinQuery()
+    Dim dbManager As New DatabaseManager
+    Dim rs As ADODB.Recordset
+    Dim query As String
+    Dim columns As Variant
+    Dim joins As Object
+    Dim filters As Object
+
+    ' Define the query components
+    columns = Array("a.COLUMN_1", "b.COLUMN_2")
+    Set joins = CreateObject("Scripting.Dictionary")
+    joins.Add "TableB b", "a.ID = b.ID"
+    Set filters = CreateObject("Scripting.Dictionary")
+    filters.Add "a.Status", "Active"
+
+    ' Build the query
+    query = BuildJoinQuery("TableA a", joins, columns, filters)
+
+    ' Execute the query
+    If dbManager.OpenConnection Then
+        Set rs = dbManager.ExecuteCommandQuery(dbManager.CreateCommand(query, dbManager.GetConnection))
+        If Not rs.EOF Then
+            ' Skip metadata when populating data
+            Call PopulateData(rs, False)
+        End If
+        rs.Close
+    Else
+        MsgBox "Failed to connect to the database.", vbCritical
     End If
 End Sub
 
 
+' Executes an action query (INSERT, UPDATE, DELETE).
+Public Sub ExecuteNonQuery(sqlText As String)
+    Dim cmd As ADODB.Command
+    On Error GoTo NonQueryError
 
-' Begins a transaction on the open connection.
-Public Sub BeginTransaction()
-    If Not con Is Nothing And con.State = adStateOpen Then
-        con.BeginTrans
-    End If
+    ' Create and execute the command
+    Set cmd = CreateCommand(sqlText, GetConnection)
+    cmd.Execute
+    Exit Sub
+
+NonQueryError:
+    MsgBox "Error executing non-query: " & Err.Description & vbCrLf & "SQL: " & sqlText, vbCritical
 End Sub
 
-' Commits the current transaction.
-Public Sub CommitTransaction()
-    If Not con Is Nothing And con.State = adStateOpen Then
-        con.CommitTrans
-    End If
-End Sub
-
-' Rolls back the current transaction.
-Public Sub RollbackTransaction()
-    If Not con Is Nothing And con.State = adStateOpen Then
-        con.RollbackTrans
-    End If
-End Sub
-
-' Creates a command with the specified SQL text.
-' @param sqlText - SQL statement to set as CommandText
-' @param connection - Active database connection
-' @return - ADODB.Command object
-Public Function CreateCommand(sqlText As String, connection As ADODB.Connection) As ADODB.Command
+' Creates a command object with the given SQL text.
+Private Function CreateCommand(sqlText As String, connection As ADODB.Connection) As ADODB.Command
     Dim cmd As ADODB.Command
     Set cmd = New ADODB.Command
     cmd.ActiveConnection = connection
@@ -106,68 +187,10 @@ Public Function CreateCommand(sqlText As String, connection As ADODB.Connection)
     Set CreateCommand = cmd
 End Function
 
-' Adds a parameter to the specified command.
-' @param cmd - Command object to add the parameter to
-' @param name - Parameter name
-' @param dataType - Data type of the parameter (e.g., adVarChar, adInteger)
-' @param size - Size of the parameter, required for text types
-' @param value - Value to assign to the parameter
-Public Sub AddParameter(cmd As ADODB.Command, name As String, dataType As DataTypeEnum, size As Long, value As Variant)
-    Dim param As ADODB.Parameter
-    Set param = cmd.CreateParameter(name, dataType, adParamInput, size, value)
-    cmd.Parameters.Append param
+' Handles the cleanup of the connection object in case of unexpected errors.
+Private Sub CleanupConnection()
+    If con Is Nothing Then Exit Sub
+    If con.State = adStateOpen Then con.Close
+    Set con = Nothing
+    transactionInProgress = False
 End Sub
-
-' Executes a command that returns a recordset (e.g., SELECT queries).
-' @param cmd - Command object with the query
-' @return - ADODB.Recordset containing query results
-Public Function ExecuteCommandQuery(cmd As ADODB.Command) As ADODB.Recordset
-    On Error GoTo QueryError
-    Dim rs As ADODB.Recordset
-    Set rs = New ADODB.Recordset
-    rs.Open cmd, , adOpenStatic, adLockReadOnly
-    Set ExecuteCommandQuery = rs
-    Exit Function
-
-QueryError:
-    MsgBox "Error executing query: " & Err.Description & vbCrLf & "SQL: " & cmd.CommandText, vbCritical
-    Set ExecuteCommandQuery = Nothing
-End Function
-
-' Executes a command that does not return a recordset (e.g., INSERT, UPDATE, DELETE).
-' @param cmd - Command object with the SQL statement
-Public Sub ExecuteCommandNonQuery(cmd As ADODB.Command)
-    On Error GoTo NonQueryError
-    cmd.Execute
-    Exit Sub
-
-NonQueryError:
-    MsgBox "Error executing non-query command: " & Err.Description, vbCritical
-End Sub
-
-' Executes a series of commands within a transaction.
-' @param commands - Collection of ADODB.Command objects to execute
-' @return - Boolean indicating success or failure
-Public Function ExecuteTransaction(commands As Collection) As Boolean
-    On Error GoTo TransactionError
-    Dim cmd As ADODB.Command
-    
-    ' Begin transaction
-    Call BeginTransaction
-    
-    ' Execute each command
-    For Each cmd In commands
-        cmd.Execute
-    Next cmd
-    
-    ' Commit transaction
-    Call CommitTransaction
-    ExecuteTransaction = True
-    Exit Function
-
-TransactionError:
-    ' Rollback transaction on error
-    Call RollbackTransaction
-    MsgBox "Error executing transaction: " & Err.Description, vbCritical
-    ExecuteTransaction = False
-End Function
