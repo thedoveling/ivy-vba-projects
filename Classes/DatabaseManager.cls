@@ -1,27 +1,27 @@
-' DatabaseManager.cls
+'@summary This class represents a database manager that handles connections, transactions, and query execution.
+'@remarks This class uses the ADODB library for database operations.
+
 Option Explicit
 
 Private con As ADODB.Connection
 Private userID As String
 Private password As String
-
 Private transactionInProgress As Boolean
 
-' Sets user credentials.
-' @param uID - The user ID
-' @param pwd - The password
+'@summary Sets the credentials for the database connection.
+'@param uID The user ID for the database connection.
+'@param pwd The password for the database connection.
 Public Sub SetCredentials(uID As String, pwd As String)
     userID = uID
     password = pwd
 End Sub
 
-' Opens a database connection using the globally stored credentials.
+'@summary Opens a connection to the database.
+'@returns True if the connection is successfully opened, False otherwise.
 Public Function OpenConnection() As Boolean
     On Error GoTo ConnectionError
 
-    ' Check if connection is already open
     If Not IsConnected Then
-        ' Build and open the connection
         Dim connectionString As String
         connectionString = "Provider=ORAOLEDB.ORACLE;" & _
                            "Data Source=DEVVV;" & _
@@ -37,88 +37,59 @@ Public Function OpenConnection() As Boolean
 
 ConnectionError:
     MsgBox "Error opening connection: " & Err.Description, vbCritical
-    If Not con Is Nothing Then
-        If con.State = adStateOpen Then con.Close
-        Set con = Nothing
-    End If
+    CleanupConnection
     OpenConnection = False
 End Function
 
-' Checks if the connection is active.
+'@summary Checks if a connection to the database is currently open.
+'@returns True if a connection is open, False otherwise.
 Public Function IsConnected() As Boolean
-    On Error Resume Next ' Suppress errors during the check
+    On Error Resume Next
     IsConnected = Not con Is Nothing And con.State = adStateOpen
-    On Error GoTo 0 ' Restore normal error handling
+    On Error GoTo 0
 End Function
 
-' Closes the database connection.
+'@summary Closes the connection to the database.
 Public Sub CloseConnection()
     If IsConnected Then
-        If transactionInProgress Then
-            MsgBox "Warning: Closing connection with an active transaction. Rolling back changes.", vbExclamation
-            RollbackTransaction
-        End If
+        If transactionInProgress Then RollbackTransaction
         con.Close
         Set con = Nothing
     End If
 End Sub
 
-' Begins a transaction.
+'@summary Begins a database transaction.
 Public Sub BeginTransaction()
-    If IsConnected Then
-        If transactionInProgress Then
-            MsgBox "Transaction already in progress.", vbExclamation
-        Else
-            con.BeginTrans
-            transactionInProgress = True
-        End If
-    Else
-        MsgBox "Cannot start a transaction. Database connection is not open.", vbCritical
+    If IsConnected And Not transactionInProgress Then
+        con.BeginTrans
+        transactionInProgress = True
     End If
 End Sub
 
-' Commits the current transaction.
+'@summary Commits the current
+'@summary Commits the current database transaction.
 Public Sub CommitTransaction()
     If IsConnected And transactionInProgress Then
         con.CommitTrans
         transactionInProgress = False
-    ElseIf Not transactionInProgress Then
-        MsgBox "No transaction to commit.", vbExclamation
-    Else
-        MsgBox "Cannot commit. Database connection is not open.", vbCritical
     End If
 End Sub
 
-' Rolls back the current transaction.
+'@summary Rolls back the current database transaction.
 Public Sub RollbackTransaction()
     If IsConnected And transactionInProgress Then
         con.RollbackTrans
         transactionInProgress = False
-    ElseIf Not transactionInProgress Then
-        MsgBox "No transaction to roll back.", vbExclamation
-    Else
-        MsgBox "Cannot roll back. Database connection is not open.", vbCritical
     End If
 End Sub
 
-' Returns the active connection.
-Public Function GetConnection() As ADODB.Connection
-    If Not IsConnected Then
-        MsgBox "Database connection is not open.", vbCritical
-        Set GetConnection = Nothing
-    Else
-        Set GetConnection = con
-    End If
-End Function
-
-' Executes a SELECT query and returns a recordset.
+'@summary Executes a SQL query and returns the result as a recordset.
+'@param sqlQuery The SQL query to execute.
+'@returns The result of the query as a recordset.
 Public Function ExecuteQuery(sqlQuery As String) As ADODB.Recordset
-    Dim cmd As ADODB.Command
-    Dim rs As ADODB.Recordset
+    Dim cmd As ADODB.Command, rs As ADODB.Recordset
     On Error GoTo QueryError
 
-    ' Create and execute the command
-    Set cmd = CreateCommand(sqlQuery, GetConnection)
     Set rs = New ADODB.Recordset
     rs.Open cmd, , adOpenStatic, adLockReadOnly
 
@@ -126,34 +97,19 @@ Public Function ExecuteQuery(sqlQuery As String) As ADODB.Recordset
     Exit Function
 
 QueryError:
-    MsgBox "Error executing query: " & Err.Description & vbCrLf & "SQL: " & sqlText, vbCritical
+    MsgBox "Error executing query: " & Err.Description, vbCritical
     Set ExecuteQuery = Nothing
 End Function
 
-
-' Executes a JOIN query and returns a recordset.
-Public Function ExecuteJoinQuery(joinquery As String) As ADODB.Recordset
+'@summary Creates a command object with the specified SQL text and connection.
+'@param sqlText The SQL text for the command.
+'@param connection The database connection to use.
+'@returns The created command object.
+Private Function CreateCommand(sqlText As String, connection As ADODB.Connection) As ADODB.Command
     Dim cmd As ADODB.Command
-    Dim rs As ADODB.Recordset
-    On Error GoTo JoinQueryError
-
-    ' Create and execute the command
-    Set cmd = CreateCommand(joinquery, GetConnection)
-    Set rs = New ADODB.Recordset
-    rs.Open cmd, , adOpenStatic, adLockReadOnly
-
-    Set ExecuteJoinQuery = rs
-    Exit Function
-
-JoinQueryError:
-    MsgBox "Error executing JOIN query: " & Err.Description & vbCrLf & "SQL: " & sqlText, vbCritical
-    Set ExecuteJoinQuery = Nothing
+    Set cmd = New ADODB.Command
+    cmd.ActiveConnection = connection
+    cmd.CommandText = sqlText
+    cmd.CommandType = adCmdText
+    Set CreateCommand = cmd
 End Function
-
-' Handles the cleanup of the connection object in case of unexpected errors.
-Private Sub CleanupConnection()
-    If con Is Nothing Then Exit Sub
-    If con.State = adStateOpen Then con.Close
-    Set con = Nothing
-    transactionInProgress = False
-End Sub

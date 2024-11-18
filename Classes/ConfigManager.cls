@@ -1,3 +1,4 @@
+' ConfigManager.cls
 Option Explicit
 
 Private columnMappings As Scripting.Dictionary
@@ -7,33 +8,23 @@ Private dbManager As DatabaseManager
 ' Initializes the configuration manager.
 ' @param tableName - The table name to fetch metadata for.
 ' @param dbManager - The database manager instance.
-Public Sub Initialize(tableName As String, dbManager As DatabaseManager, Optional skipMetadata As Boolean = False)
-    If Not dbManager.IsConnected Then
-        Err.Raise vbObjectError + 1, "ConfigManager", "Database connection is not open."
-    End If
-    ' Set DatabaseManager instance
-    Set Me.dbManager = dbManager
 
-    If Not skipMetadata Then
-        ' Load metadata configurations
-        Call LoadConfigurationsFromOracle(tableName)
-    End If
+Public Sub Initialize(tableName As String, dbManager As DatabaseManager, Optional skipMetadata As Boolean = False)
+    If Not dbManager.IsConnected Then Err.Raise vbObjectError + 1, "ConfigManager", "Database connection is not open."
+
+    Set Me.dbManager = dbManager
+    If Not skipMetadata Then LoadConfigurationsFromOracle tableName
 End Sub
 
-' Loads metadata configurations from Oracle.
+' Loads column mappings and data validation configurations from the database.
 Private Sub LoadConfigurationsFromOracle(tableName As String)
     Dim rs As ADODB.Recordset
-    Dim metadataQuery As String
+    Set rs = dbManager.ExecuteQuery(SQLHelper.BuildMetadataQuery(tableName))
 
-        ' Use SQLHelper to build the metadata query
-    metadataQuery = SQLHelper.BuildMetadataQuery(tableName)
-    Set rs = dbManager.ExecuteCommandQuery(dbManager.CreateCommand(metadataQuery, dbManager.GetConnection))
-
-    ' Initialize dictionaries
     Set columnMappings = New Scripting.Dictionary
     Set dataValidationConfigs = New Scripting.Dictionary
 
-    ' Populate metadata
+'    Loop through the recordset and populate the dictionaries.
     Do While Not rs.EOF
         columnMappings.Add rs.Fields("COLUMN_NAME").Value, rs.Fields("COLUMN_NAME").Value
         dataValidationConfigs.Add rs.Fields("COLUMN_NAME").Value, rs.Fields("DATA_TYPE").Value
@@ -42,12 +33,12 @@ Private Sub LoadConfigurationsFromOracle(tableName As String)
     rs.Close
 End Sub
 
-' Provides access to column mappings.
+' Retrieves the column mappings.
 Public Function GetColumnMappings() As Scripting.Dictionary
     Set GetColumnMappings = columnMappings
 End Function
 
-' Provides access to data validation configurations.
+' Retrieves the data validation configurations.
 Public Function GetDataValidationConfigs() As Scripting.Dictionary
     Set GetDataValidationConfigs = dataValidationConfigs
 End Function

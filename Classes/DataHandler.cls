@@ -1,57 +1,53 @@
+' DataHandler.cls
 Option Explicit
 
-Private Const DATA_SHEET_NAME As String = "Data"
-Private Const HEADER_ROW As Long = 2
-Private Const START_ROW As Long = 3
-
 ' Populates data from a recordset into a worksheet.
+''' <param name="rs">The ADODB.Recordset containing the data.</param>
+''' <param name="useMetadata">Optional. Specifies whether to use metadata for populating headers. Default is True.</param>
 Public Sub PopulateData(rs As ADODB.Recordset, Optional useMetadata As Boolean = True)
-    Dim dbManager As DatabaseManager
-    Dim configManager As ConfigManager
-    Dim targetSheet As Worksheet
-    Dim lastRow As Long, lastCol As Long
-    Dim tblRange As Range
-    Dim tbl As ListObject
+    Dim configManager As ConfigManager, targetSheet As Worksheet
+    Dim lastRow As Long, lastCol As Long, tblRange As Range, tbl As ListObject
 
-    ' Initialize ConfigManager only if metadata is required
+'    Initialize ConfigManager if using metadata
     If useMetadata Then
         Set configManager = New ConfigManager
-        configManager.Initialize tableName, dbManager
+        configManager.Initialize "YourTableName", dbManager
     End If
 
-    ' Set the target worksheet
+'   Clear existing data in the target sheet
     Set targetSheet = ThisWorkbook.Sheets(DATA_SHEET_NAME)
+    ClearData targetSheet
 
-    ' Clear existing data
-    Call ClearData(targetSheet)
-
-    ' Populate headers and rows
+'    Populate headers based on metadata or without metadata
     If useMetadata Then
-        Call PopulateHeaders(targetSheet, rs, configManager)
+        PopulateHeaders targetSheet, rs, configManager
     Else
-        Call PopulateHeadersWithoutMetadata(targetSheet, rs)
+        PopulateHeadersWithoutMetadata targetSheet, rs
     End If
 
-    Call PopulateRows(targetSheet, rs)
+    PopulateRows targetSheet, rs
 
-    ' Create table and apply configurations (if needed)
+'   Create a DataTable from the populated range
     lastCol = rs.Fields.Count
     lastRow = targetSheet.Cells(targetSheet.Rows.Count, 1).End(xlUp).Row
     Set tblRange = targetSheet.Range(targetSheet.Cells(HEADER_ROW, 1), targetSheet.Cells(lastRow, lastCol))
     Set tbl = CreateDataTable(targetSheet, tblRange)
-
-    If useMetadata Then Call ApplyConfigurations(targetSheet, rs, configManager)
-
-    ' Cleanup
-    rs.Close
 End Sub
 
-' Clears worksheet data while keeping headers intact.
+''' <summary>
+''' Clears the data in the target worksheet.
+''' </summary>
+''' <param name="targetSheet">The worksheet to clear the data from.</param>
 Private Sub ClearData(targetSheet As Worksheet)
     targetSheet.Rows(START_ROW & ":" & targetSheet.Rows.Count).ClearContents
 End Sub
 
-' Populates headers dynamically using metadata.
+''' <summary>
+''' Populates the headers in the target worksheet using metadata from the ConfigManager.
+''' </summary>
+''' <param name="targetSheet">The worksheet to populate the headers in.</param>
+''' <param name="rs">The ADODB.Recordset containing the data.</param>
+''' <param name="configManager">The ConfigManager object used to retrieve column mappings.</param>
 Private Sub PopulateHeaders(targetSheet As Worksheet, rs As ADODB.Recordset, configManager As ConfigManager)
     Dim col As Long
     For col = 0 To rs.Fields.Count - 1
@@ -59,6 +55,11 @@ Private Sub PopulateHeaders(targetSheet As Worksheet, rs As ADODB.Recordset, con
     Next col
 End Sub
 
+''' <summary>
+''' Populates the headers in the target worksheet without using metadata.
+''' </summary>
+''' <param name="targetSheet">The worksheet to populate the headers in.</param>
+''' <param name="rs">The ADODB.Recordset containing the data.</param>
 Private Sub PopulateHeadersWithoutMetadata(targetSheet As Worksheet, rs As ADODB.Recordset)
     Dim col As Long
     For col = 0 To rs.Fields.Count - 1
@@ -66,8 +67,24 @@ Private Sub PopulateHeadersWithoutMetadata(targetSheet As Worksheet, rs As ADODB
     Next col
 End Sub
 
-' Populates data rows from the recordset.
+''' <summary>
+''' Populates the rows in the target worksheet with data from the recordset.
+''' </summary>
+''' <param name="targetSheet">The worksheet to populate the rows in.</param>
+''' <param name="rs">The ADODB.Recordset containing the data.</param>
 Private Sub PopulateRows(targetSheet As Worksheet, rs As ADODB.Recordset)
     targetSheet.Cells(START_ROW, 1).CopyFromRecordset rs
 End Sub
 
+''' <summary>
+''' Creates a DataTable from the specified range in the target worksheet.
+''' </summary>
+''' <param name="targetSheet">The worksheet containing the range.</param>
+''' <param name="tblRange">The range to create the DataTable from.</param>
+''' <returns>The created ListObject representing the DataTable.</returns>
+Private Function CreateDataTable(targetSheet As Worksheet, tblRange As Range) As ListObject
+    Dim tbl As ListObject
+    Set tbl = targetSheet.ListObjects.Add(xlSrcRange, tblRange, , xlYes)
+    tbl.TableStyle = "TableStyleMedium9"
+    Set CreateDataTable = tbl
+End Function

@@ -1,3 +1,4 @@
+' UserFormModule.bas
 Option Explicit
 
 ' Opens the UserForm to collect user credentials.
