@@ -11,8 +11,6 @@ End Sub
 
 Private Sub CommandButtonCancel_Click()
     ' Clear input and hide the form
-    Me.TextBoxUserID.Text = ""
-    Me.TextBoxPassword.Text = ""
     Me.Hide
 End Sub
 

@@ -2,7 +2,6 @@
 Option Explicit
 
 Private con As ADODB.Connection
-Private isConnected As Boolean
 
 ' Opens a database connection using the globally stored credentials.
 Public Function OpenConnection() As Boolean
@@ -35,7 +34,7 @@ ConnectionError:
         If con.State = adStateOpen Then con.Close
         Set con = Nothing
     End If
-    isConnected = False
+    'isConnected = False
     OpenConnection = False
 End Function
 
@@ -43,21 +42,15 @@ End Function
 Public Function IsConnected() As Boolean
     On Error Resume Next
     IsConnected = Not con Is Nothing And con.State = adStateOpen
-End Function
-
-
-
-    ' Decrypt password
-    password = GetDecryptedPassword()
-
-    ' Build and open the connection
-    connectionString = "Provider=ORAOLEDB.ORACLE;" & _
-                       "Data Source=DEVVV;" & _
-                       "User Id=" & userID & ";" & _
-                       "Password=" & password & ";"
-    Set con = New ADODB.Connection
-    con.ConnectionString = connectionString
-    con.Open
+    
+    ' ' Build and open the connection
+    ' connectionString = "Provider=ORAOLEDB.ORACLE;" & _
+    '                    "Data Source=DEVVV;" & _
+    '                    "User Id=" & userID & ";" & _
+    '                    "Password=" & password & ";"
+    ' Set con = New ADODB.Connection
+    ' con.ConnectionString = connectionString
+    ' con.Open
 
     OpenConnection = True
     Exit Function
@@ -74,7 +67,7 @@ End Function
 ' Clears stored credentials.
 Public Sub ClearCredentials()
     userID = vbNullString
-    encryptedPassword = vbNullString
+    password = vbNullString
 End Sub
 
 ' Closes the database connection if open.

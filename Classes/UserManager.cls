@@ -4,7 +4,7 @@ Option Explicit
 ' Validates the user credentials.
 ' @param username - The username to validate
 ' @return - Boolean indicating success or failure
-Public Function ValidateUser(username As String) As Boolean
+Public Function ValidateUser() As Boolean
     ' Example validation logic
     If username = Environ$("UserName") Then
         ValidateUser = True
@@ -19,10 +19,3 @@ Public Function GetCurrentUsername() As String
     GetCurrentUsername = Environ$("UserName")
 End Function
 
-Sub LogoutUser()
-    Dim dbManager As DatabaseManager
-    Set dbManager = New DatabaseManager
-
-    dbManager.CloseConnection
-    MsgBox "You have been logged out.", vbInformation
-End Sub

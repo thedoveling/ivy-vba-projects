@@ -21,7 +21,7 @@ Public Sub Initialize(tableName As String, sqlQuery As String, dbManager As Data
     Set Me.dbManager = dbManager
     
     ' Open database connection
-    If dbManager.OpenConnection() Then
+    If dbManager.OpenConnection Then
         ' Load configurations from Oracle
         Call LoadConfigurationsFromOracle(tableName, sqlQuery)
         
