@@ -130,7 +130,7 @@ Public Function ExecuteCommandQuery(cmd As ADODB.Command) As ADODB.Recordset
     Exit Function
 
 QueryError:
-    MsgBox "Error executing query: " & Err.Description, vbCritical
+    MsgBox "Error executing query: " & Err.Description & vbCrLf & "SQL: " & cmd.CommandText, vbCritical
     Set ExecuteCommandQuery = Nothing
 End Function
 
