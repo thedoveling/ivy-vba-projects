@@ -6,26 +6,21 @@ Private con As ADODB.Connection
 ' Opens a database connection using the globally stored credentials.
 Public Function OpenConnection() As Boolean
     On Error GoTo ConnectionError
-    Dim connectionString As String
 
-    ' Ensure global credentials are set
-    If UserID = vbNullString Or Password = vbNullString Then
-        MsgBox "Error: User credentials are not set. Please set them first.", vbCritical
-        OpenConnection = False
-        Exit Function
+    ' Check if connection is already open
+    If Not IsConnected Then
+        ' Build and open the connection
+        Dim connectionString As String
+        connectionString = "Provider=ORAOLEDB.ORACLE;" & _
+                           "Data Source=DEVVV;" & _
+                           "User Id=" & UserID & ";" & _
+                           "Password=" & Password & ";"
+        Set con = New ADODB.Connection
+        con.ConnectionString = connectionString
+        con.Open
     End If
 
-    ' Build and open the connection
-    connectionString = "Provider=ORAOLEDB.ORACLE;" & _
-                       "Data Source=DEVVV;" & _
-                       "User Id=" & UserID & ";" & _
-                       "Password=" & Password & ";"
-    Set con = New ADODB.Connection
-    con.ConnectionString = connectionString
-    con.Open
-
-    isConnected = True
-    OpenConnection = True
+    OpenConnection = IsConnected
     Exit Function
 
 ConnectionError:
@@ -34,37 +29,32 @@ ConnectionError:
         If con.State = adStateOpen Then con.Close
         Set con = Nothing
     End If
-    'isConnected = False
     OpenConnection = False
 End Function
 
 ' Checks if the connection is active.
 Public Function IsConnected() As Boolean
-    On Error Resume Next
     IsConnected = Not con Is Nothing And con.State = adStateOpen
 End Function
 
-
-    ' Build and open the connection
-    connectionString = "Provider=ORAOLEDB.ORACLE;" & _
-                       "Data Source=DEVVV;" & _
-                       "User Id=" & userID & ";" & _
-                       "Password=" & password & ";"
-    Set con = New ADODB.Connection
-    con.ConnectionString = connectionString
-    con.Open
-
-    OpenConnection = True
-    Exit Function
-
-ConnectionError:
-    MsgBox "Error opening connection: " & Err.Description, vbCritical
-    If Not con Is Nothing Then
-        If con.State = adStateOpen Then con.Close
+' Closes the database connection.
+Public Sub CloseConnection()
+    If IsConnected Then
+        con.Close
         Set con = Nothing
     End If
-    OpenConnection = False
+End Sub
+
+' Returns the active connection.
+Public Function GetConnection() As ADODB.Connection
+    If Not IsConnected Then
+        MsgBox "Database connection is not open.", vbCritical
+        Set GetConnection = Nothing
+    Else
+        Set GetConnection = con
+    End If
 End Function
+
 
 ' Clears stored credentials.
 Public Sub ClearCredentials()
@@ -81,16 +71,6 @@ Public Sub CloseConnection()
 End Sub
 
 
-
-' Returns the active connection.
-Public Function GetConnection() As ADODB.Connection
-    If con Is Nothing Or con.State <> adStateOpen Then
-        MsgBox "Connection is not open.", vbCritical
-        Set GetConnection = Nothing
-    Else
-        Set GetConnection = con
-    End If
-End Function
 
 ' Begins a transaction on the open connection.
 Public Sub BeginTransaction()

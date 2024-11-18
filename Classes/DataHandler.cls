@@ -1,3 +1,4 @@
+' datahandler.cls
 Option Explicit
 
 Private Const DATA_SHEET_NAME As String = "Data"
@@ -6,31 +7,29 @@ Private Const START_ROW As Long = 3
 
 ' Populates data from a recordset into the "Data" sheet.
 ' @param rs - ADODB.Recordset containing the data
+
 Public Sub PopulateData(rs As ADODB.Recordset)
+    Dim dbManager As New DatabaseManager
+    Dim configManager As New ConfigManager
     Dim targetSheet As Worksheet
-    Dim tbl As ListObject
-    Dim tblRange As Range
-    Dim configManager As ConfigManager
-    Dim dbManager As DatabaseManager ' Define DatabaseManager instance
-    Dim lastRow As Long, lastCol As Long
     Dim tableName As String
 
-    ' Initialize DatabaseManager
-    Set dbManager = New DatabaseManager
-    
-    ' Initialize ConfigManager
-    Set configManager = New ConfigManager
-    configManager.Initialize tableName, "", dbManager ' Pass empty SQL string to let configmanager build dynamically
+    ' Step 1: Establish database connection
+    If Not dbManager.OpenConnection Then
+        MsgBox "Failed to connect to the database.", vbCritical
+        Exit Sub
+    End If
 
-    ' Get the target sheet
+    ' Step 2: Initialize ConfigManager
+    tableName = "SMALL_TABLE"
+    configManager.Initialize tableName, "", dbManager
+
+    ' Step 3: Load data into worksheet
     Set targetSheet = ThisWorkbook.Sheets(DATA_SHEET_NAME)
-
-    ' Clear existing data but retain headers
     Call ClearData(targetSheet)
-
-    ' Populate headers and data
     Call PopulateHeaders(targetSheet, rs, configManager)
     Call PopulateRows(targetSheet, rs)
+
 
     ' Create table for the populated range
     lastCol = rs.Fields.Count
@@ -39,7 +38,12 @@ Public Sub PopulateData(rs As ADODB.Recordset)
     Set tbl = CreateDataTable(targetSheet, tblRange)
 
     ' Apply configurations (validation, tooltips, etc.)
-    Call ApplyConfigurations(targetSheet, rs, configManager)
+    'Call ApplyConfigurations(targetSheet, rs, configManager)
+
+    ' Cleanup
+    rs.Close
+    dbManager.CloseConnection
+
 End Sub
 
 ' Clears data in the sheet, keeping the headers intact.

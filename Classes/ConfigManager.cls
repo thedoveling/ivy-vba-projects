@@ -8,44 +8,38 @@ Private tooltips As Scripting.Dictionary
 
 Private dbManager As DatabaseManager
 
-' Initializes the ConfigManager by loading configurations from Oracle and local configuration file.
+' Initializes the configuration manager with an open database connection.
 ' @param tableName - The name of the table to load configurations for
-' @param sqlQuery - The SQL query to execute for loading configurations
-Public Sub Initialize(tableName As String, sqlQuery As String, dbManager As DatabaseManager)
-    Dim metadataQuery As String
-    Dim rs As ADODB.Recordset
-
-    Set columnMappings = New Scripting.Dictionary
-    Set dataValidationConfigs = New Scripting.Dictionary
-    Set fieldOptions = New Scripting.Dictionary
-    Set tooltips = New Scripting.Dictionary
-    
-    ' Set the DatabaseManager instance
-    Set dbManager = New DatabaseManager
-
-    ' Build a default SQL query if one is not provided
-    If sqlQuery = "" Then
-        metadataQuery = "SELECT COLUMN_NAME, DATA_TYPE FROM USER_TAB_COLUMNS WHERE TABLE_NAME = '" & tableName & "'"
-    Else
-        metadataQuery = sqlQuery
+' @param dbManager - The database manager object
+Public Sub Initialize(tableName As String, dbManager As DatabaseManager)
+    If Not dbManager.IsConnected Then
+        MsgBox "Database connection is not open. Please establish a connection first.", vbCritical
+        Exit Sub
     End If
-    
-    ' Open database connection
-    If dbManager.OpenConnection Then
-        ' Load configurations from Oracle
-        Call LoadConfigurationsFromOracle(tableName)
-        
-        ' Load field options and tooltips from local configuration file
-        Call LoadLocalConfigurations
-        
-        ' Close database connection
-        dbManager.CloseConnection
-    Else
-        MsgBox "Failed to open database connection.", vbCritical
-    End If
+
+    Set ConfigManager.dbManager = dbManager
+    LoadConfigurationsFromOracle(tableName)
+    LoadLocalConfigurations()
 End Sub
 
-' Maps column headers to Oracle fields.
+' Loads configurations from Oracle using the database manager.
+Private Sub LoadConfigurationsFromOracle(tableName As String)
+    Dim rs As ADODB.Recordset
+    Dim metadataQuery As String
+
+    metadataQuery = "SELECT COLUMN_NAME, DATA_TYPE FROM ALL_TAB_COLUMNS WHERE OWNER IN ('ZZZHSO','ZZZHSF') AND TABLE_NAME = '" & tableName & "'"
+    Set rs = dbManager.ExecuteCommandQuery(dbManager.CreateCommand(metadataQuery, dbManager.GetConnection))
+
+    Do While Not rs.EOF
+        columnMappings.Add rs.Fields("COLUMN_NAME").Value, rs.Fields("COLUMN_NAME").Value
+        dataValidationConfigs.Add rs.Fields("COLUMN_NAME").Value, rs.Fields("DATA_TYPE").Value
+        rs.MoveNext
+    Loop
+
+    rs.Close
+End Sub
+
+' Retrieves column mappings.
 ' @return - A dictionary of column mappings
 Public Function GetColumnMappings() As Scripting.Dictionary
     Set GetColumnMappings = columnMappings
@@ -69,50 +63,7 @@ Public Function GetTooltips() As Scripting.Dictionary
     Set GetTooltips = tooltips
 End Function
 
-' Loads configurations from Oracle.
-' @param tableName - The name of the table to load configurations for
-' @param sqlQuery - The SQL query to execute for loading configurations
-
-' Dynamically builds and executes the metadata query to load configurations from Oracle.
-' @param tableName - The name of the table to load configurations for
-Private Sub LoadConfigurationsFromOracle(tableName As String)
-    Dim rs As ADODB.Recordset
-    Dim columnName As String
-    Dim dataType As String
-    Dim metadataQuery As String
-
-    On Error GoTo LoadError
-
-    ' Dynamically build the query
-    metadataQuery = "SELECT COLUMN_NAME, DATA_TYPE FROM USER_TAB_COLUMNS WHERE TABLE_NAME = '" & tableName & "'"
-
-    ' Execute the query
-    Set rs = dbManager.ExecuteCommandQuery(dbManager.CreateCommand(metadataQuery, dbManager.GetConnection))
-
-    ' Process the recordset to populate mappings and configurations
-    If Not rs Is Nothing Then
-        Do While Not rs.EOF
-            columnName = rs.Fields("COLUMN_NAME").Value
-            dataType = rs.Fields("DATA_TYPE").Value
-
-            ' Populate column mappings
-            If Not columnMappings.Exists(columnName) Then columnMappings.Add columnName, columnName ' Default: column name is the friendly name
-
-            ' Populate data validation configurations
-            If Not dataValidationConfigs.Exists(columnName) Then dataValidationConfigs.Add columnName, dataType ' Use data type for validation rules
-
-            rs.MoveNext
-        Loop
-        rs.Close
-    End If
-
-    Exit Sub
-
-LoadError:
-    Call HandleRuntimeError("Error loading configurations from Oracle")
-End Sub
-
-' Load local configurations from the Config worksheet.
+' Loads local configurations from the Config worksheet.
 Private Sub LoadLocalConfigurations()
     Dim ws As Worksheet
     Dim lastRow As Long, i As Long
