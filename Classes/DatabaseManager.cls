@@ -42,9 +42,13 @@ End Sub
 
 ' Returns the active connection.
 Public Function GetConnection() As ADODB.Connection
-    Set GetConnection = con
+    If con Is Nothing Or con.State <> adStateOpen Then
+        MsgBox "Connection is not open.", vbCritical
+        Set GetConnection = Nothing
+    Else
+        Set GetConnection = con
+    End If
 End Function
-
 
 ' Begins a transaction on the open connection.
 Public Sub BeginTransaction()

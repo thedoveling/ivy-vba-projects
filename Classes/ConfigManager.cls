@@ -7,6 +7,7 @@ Private fieldOptions As Scripting.Dictionary
 Private tooltips As Scripting.Dictionary
 
 Private con As ADODB.Connection
+Private dbManager As New DatabaseManager
 
 ' Initializes the ConfigManager by loading configurations from Oracle and local configuration file.
 ' @param tableName - The name of the table to load configurations for
@@ -18,16 +19,15 @@ Public Sub Initialize(tableName As String, sqlQuery As String)
     Set tooltips = New Scripting.Dictionary
     
     ' Open database connection
-    Set con = DatabaseManager.GetConnection()
-    ' Load configurations from Oracle
-    Call LoadConfigurationsFromOracle(tableName, sqlQuery)
+    If dbManager.OpenConnectionWithCredentials("password") Then
+        ' Load configurations from Oracle
+        Call LoadConfigurationsFromOracle(tableName, sqlQuery)
     
-    ' Load field options and tooltips from local configuration file
-    Call LoadLocalConfigurations
-    
-    ' Close database connection
-    con.Close
-    Set con = Nothing
+        ' Load field options and tooltips from local configuration file
+        Call LoadLocalConfigurations
+    Else
+        MsgBox "Error initializing ConfigManager: Unable to open database connection.", vbCritical
+    End If
 End Sub
 
 ' Maps column headers to Oracle fields.
@@ -66,8 +66,7 @@ Private Sub LoadConfigurationsFromOracle(tableName As String, sqlQuery As String
     On Error GoTo LoadError
     
     ' Execute the provided SQL query to get configurations from Oracle
-    Set rs = New ADODB.Recordset
-    rs.Open sqlQuery, con, adOpenStatic, adLockReadOnly
+    Set rs = dbManager.ExecuteCommandQuery(dbManager.CreateCommand(sqlQuery, dbManager.GetConnection))
     
     ' Load configurations from the recordset
     Do While Not rs.EOF
@@ -84,6 +83,10 @@ Private Sub LoadConfigurationsFromOracle(tableName As String, sqlQuery As String
     
     rs.Close
     Set rs = Nothing
+    
+    ' Close database connection
+    con.Close
+    Set con = Nothing
     
     Exit Sub
 
