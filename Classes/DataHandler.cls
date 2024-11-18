@@ -5,7 +5,8 @@ Private Const HEADER_ROW As Long = 2
 Private Const START_ROW As Long = 3
 
 ' Populates data from a recordset into a worksheet.
-PPublic Sub PopulateData(rs As ADODB.Recordset, Optional useMetadata As Boolean = True)
+Public Sub PopulateData(rs As ADODB.Recordset, Optional useMetadata As Boolean = True)
+    Dim dbManager As DatabaseManager
     Dim configManager As ConfigManager
     Dim targetSheet As Worksheet
     Dim lastRow As Long, lastCol As Long

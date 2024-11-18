@@ -112,13 +112,13 @@ Public Function GetConnection() As ADODB.Connection
 End Function
 
 ' Executes a SELECT query and returns a recordset.
-Public Function ExecuteQuery(sqlText As String) As ADODB.Recordset
+Public Function ExecuteQuery(sqlQuery As String) As ADODB.Recordset
     Dim cmd As ADODB.Command
     Dim rs As ADODB.Recordset
     On Error GoTo QueryError
 
     ' Create and execute the command
-    Set cmd = CreateCommand(sqlText, GetConnection)
+    Set cmd = CreateCommand(sqlQuery, GetConnection)
     Set rs = New ADODB.Recordset
     rs.Open cmd, , adOpenStatic, adLockReadOnly
 
@@ -130,61 +130,24 @@ QueryError:
     Set ExecuteQuery = Nothing
 End Function
 
-' For SQL calls with multiple tables
-Sub ExecuteJoinQuery()
-    Dim dbManager As New DatabaseManager
-    Dim rs As ADODB.Recordset
-    Dim query As String
-    Dim columns As Variant
-    Dim joins As Object
-    Dim filters As Object
 
-    ' Define the query components
-    columns = Array("a.COLUMN_1", "b.COLUMN_2")
-    Set joins = CreateObject("Scripting.Dictionary")
-    joins.Add "TableB b", "a.ID = b.ID"
-    Set filters = CreateObject("Scripting.Dictionary")
-    filters.Add "a.Status", "Active"
-
-    ' Build the query
-    query = BuildJoinQuery("TableA a", joins, columns, filters)
-
-    ' Execute the query
-    If dbManager.OpenConnection Then
-        Set rs = dbManager.ExecuteCommandQuery(dbManager.CreateCommand(query, dbManager.GetConnection))
-        If Not rs.EOF Then
-            ' Skip metadata when populating data
-            Call PopulateData(rs, False)
-        End If
-        rs.Close
-    Else
-        MsgBox "Failed to connect to the database.", vbCritical
-    End If
-End Sub
-
-
-' Executes an action query (INSERT, UPDATE, DELETE).
-Public Sub ExecuteNonQuery(sqlText As String)
+' Executes a JOIN query and returns a recordset.
+Public Function ExecuteJoinQuery(joinquery As String) As ADODB.Recordset
     Dim cmd As ADODB.Command
-    On Error GoTo NonQueryError
+    Dim rs As ADODB.Recordset
+    On Error GoTo JoinQueryError
 
     ' Create and execute the command
-    Set cmd = CreateCommand(sqlText, GetConnection)
-    cmd.Execute
-    Exit Sub
+    Set cmd = CreateCommand(joinquery, GetConnection)
+    Set rs = New ADODB.Recordset
+    rs.Open cmd, , adOpenStatic, adLockReadOnly
 
-NonQueryError:
-    MsgBox "Error executing non-query: " & Err.Description & vbCrLf & "SQL: " & sqlText, vbCritical
-End Sub
+    Set ExecuteJoinQuery = rs
+    Exit Function
 
-' Creates a command object with the given SQL text.
-Private Function CreateCommand(sqlText As String, connection As ADODB.Connection) As ADODB.Command
-    Dim cmd As ADODB.Command
-    Set cmd = New ADODB.Command
-    cmd.ActiveConnection = connection
-    cmd.CommandText = sqlText
-    cmd.CommandType = adCmdText
-    Set CreateCommand = cmd
+JoinQueryError:
+    MsgBox "Error executing JOIN query: " & Err.Description & vbCrLf & "SQL: " & sqlText, vbCritical
+    Set ExecuteJoinQuery = Nothing
 End Function
 
 ' Handles the cleanup of the connection object in case of unexpected errors.
