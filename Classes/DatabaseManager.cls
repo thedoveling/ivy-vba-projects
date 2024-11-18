@@ -42,15 +42,17 @@ End Function
 Public Function IsConnected() As Boolean
     On Error Resume Next
     IsConnected = Not con Is Nothing And con.State = adStateOpen
-    
-    ' ' Build and open the connection
-    ' connectionString = "Provider=ORAOLEDB.ORACLE;" & _
-    '                    "Data Source=DEVVV;" & _
-    '                    "User Id=" & userID & ";" & _
-    '                    "Password=" & password & ";"
-    ' Set con = New ADODB.Connection
-    ' con.ConnectionString = connectionString
-    ' con.Open
+End Function
+
+
+    ' Build and open the connection
+    connectionString = "Provider=ORAOLEDB.ORACLE;" & _
+                       "Data Source=DEVVV;" & _
+                       "User Id=" & userID & ";" & _
+                       "Password=" & password & ";"
+    Set con = New ADODB.Connection
+    con.ConnectionString = connectionString
+    con.Open
 
     OpenConnection = True
     Exit Function
