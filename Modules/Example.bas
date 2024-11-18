@@ -1,49 +1,53 @@
-Sub ExampleUsage()
-    Dim credentials As Variant
-    Dim userID As String
-    Dim password As String
-    Dim dbManager As DatabaseManager
-    Dim userManager As UserManager
+' UnitTesting.bas
+Option Explicit
+
+' Runs all tests.
+Public Sub RunAllTests()
+    On Error GoTo TestError
+
+    Debug.Print "Starting Tests..."
+    Call Test_ConfigManager
+    Call Test_DataHandler
+    Debug.Print "All Tests Completed Successfully."
+
+    Exit Sub
+
+TestError:
+    Call HandleRuntimeError("Test failed")
+End Sub
+
+' Test ConfigManager initialization.
+Private Sub Test_ConfigManager()
+    Dim configManager As ConfigManager
+    Set configManager = New ConfigManager
+
+    configManager.Initialize
+    Debug.Assert Not configManager.GetColumnMappings Is Nothing
+    Debug.Assert configManager.GetColumnMappings.Count > 0
+
+    Debug.Print "ConfigManager Tests Passed."
+End Sub
+
+' Test DataHandler population.
+Private Sub Test_DataHandler()
     Dim dataHandler As DataHandler
-    Dim rs As ADODB.Recordset
-    Dim targetSheet As Worksheet
-    
-    ' Get user credentials
-    credentials = GetUserCredentials()
-    userID = credentials(0)
-    password = credentials(1)
-    
-    ' Initialize UserManager
-    Set userManager = New UserManager
-    
-    ' Validate user credentials
-    If userManager.ValidateUser(userID, password) Then
-        ' Initialize DatabaseManager
-        Set dbManager = New DatabaseManager
-        
-        ' Open database connection
-        If dbManager.OpenConnectionWithCredentials(userID, password) Then
-            ' Execute SQL query and get recordset
-            Set rs = dbManager.ExecuteQuery("SELECT field1, field2, field3 FROM YourTable WHERE Condition = 'Value'")
-            
-            ' Initialize DataHandler
-            Set dataHandler = New DataHandler
-            
-            ' Set target sheet
-            Set targetSheet = ThisWorkbook.Sheets("Data")
-            
-            ' Populate data as a table
-            dataHandler.PopulateData targetSheet, rs
-            
-            ' Close recordset and connection
-            rs.Close
-            dbManager.CloseConnection
-            
-            MsgBox "Data populated successfully!", vbInformation
-        Else
-            MsgBox "Connection failed.", vbCritical
-        End If
-    Else
-        MsgBox "Invalid user credentials.", vbCritical
-    End If
+    Dim mockRecordset As ADODB.Recordset
+    Set dataHandler = New DataHandler
+
+    ' Create mock recordset
+    Set mockRecordset = CreateObject("ADODB.Recordset")
+    With mockRecordset
+        .Fields.Append "Column1", adVarChar, 50
+        .Fields.Append "Column2", adVarChar, 50
+        .Open
+        .AddNew Array("Column1", "Column2"), Array("Data1", "Data2")
+    End With
+
+    ' Call PopulateData
+    Call dataHandler.PopulateData(mockRecordset)
+
+    ' Assert
+    Debug.Assert ThisWorkbook.Sheets("Data").ListObjects.Count > 0
+
+    Debug.Print "DataHandler Tests Passed."
 End Sub

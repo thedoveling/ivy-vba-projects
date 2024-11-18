@@ -40,6 +40,12 @@ Public Sub CloseConnection()
     End If
 End Sub
 
+' Returns the active connection.
+Public Function GetConnection() As ADODB.Connection
+    Set GetConnection = con
+End Function
+
+
 ' Begins a transaction on the open connection.
 Public Sub BeginTransaction()
     If Not con Is Nothing And con.State = adStateOpen Then
