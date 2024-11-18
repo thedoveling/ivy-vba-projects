@@ -2,13 +2,17 @@
 Option Explicit
 
 ' Populates data from a recordset into the specified Excel sheet.
-' Dynamically sets headers based on the recordset fields.
+' Dynamically sets headers based on recordset fields and converts the range to a table.
 ' @param targetSheet - The Excel sheet to populate data in
 ' @param rs - The recordset containing the data
-' @param headerRow - The row number to set headers in (default is 4)
-' @param startRow - The row number to start populating data (default is 5)
-Public Sub PopulateData(targetSheet As Worksheet, rs As ADODB.Recordset, Optional headerRow As Long = 4, Optional startRow As Long = 5)
+' @param headerRow - The row number to set headers in (default is 2)
+' @param startRow - The row number to start populating data (default is 3)
+Public Sub PopulateData(targetSheet As Worksheet, rs As ADODB.Recordset, Optional headerRow As Long = 2, Optional startRow As Long = 3)
     Dim col As Long
+    Dim lastCol As Long
+    Dim lastRow As Long
+    Dim tblRange As Range
+    Dim tbl As ListObject
     
     ' Set headers dynamically based on recordset fields
     For col = 0 To rs.Fields.Count - 1
@@ -17,6 +21,18 @@ Public Sub PopulateData(targetSheet As Worksheet, rs As ADODB.Recordset, Optiona
     
     ' Populate data starting from startRow
     targetSheet.Cells(startRow, 1).CopyFromRecordset rs
+    
+    ' Determine the last column and last row
+    lastCol = rs.Fields.Count
+    lastRow = targetSheet.Cells(targetSheet.Rows.Count, 1).End(xlUp).Row
+    
+    ' Define the range to convert to a table
+    Set tblRange = targetSheet.Range(targetSheet.Cells(headerRow, 1), targetSheet.Cells(lastRow, lastCol))
+    
+    ' Convert the range to a table
+    Set tbl = targetSheet.ListObjects.Add(xlSrcRange, tblRange, , xlYes)
+    tbl.Name = "DataTable"
+    tbl.TableStyle = "TableStyleMedium9"
 End Sub
 
 ' Clears data in the specified range without affecting headers.
