@@ -18,10 +18,7 @@ Public Sub Initialize(tableName As String, sqlQuery As String)
     Set tooltips = New Scripting.Dictionary
     
     ' Open database connection
-    Set con = New ADODB.Connection
-    con.ConnectionString = "Provider=ORAOLEDB.ORACLE;Data Source=DEVVV;User Id=" & Environ$("UserName") & ";Password=" & "password" & ";"
-    con.Open
-    
+    Set con = DatabaseManager.GetConnection()
     ' Load configurations from Oracle
     Call LoadConfigurationsFromOracle(tableName, sqlQuery)
     
