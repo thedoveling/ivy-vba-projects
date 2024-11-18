@@ -28,3 +28,22 @@ Status: Planned
 Description: Document the code and project thoroughly. Implement unit tests and perform comprehensive testing to ensure reliability and correctness.
 Summary
 This project aims to develop a robust and user-friendly VBA application that interacts with an Oracle database. The key components include user authentication, dynamic data population, configuration management, error handling, and transaction management. The project will be developed iteratively, with thorough documentation and testing at each stage.
+
+Strict Separation of Concerns:
+
+Keep transaction logic in DatabaseManager.
+Handle dynamic configs in ConfigManager.
+Let DataHandler focus purely on data population with minimal reliance on other modules.
+Safe Transactions:
+
+Ensure database operations use transactions that cleanly rollback in the event of an error.
+Avoid unnecessary state coupling or redundant handling across modules.
+Dynamic and Flexible Configurations:
+
+Allow configurations to be fetched dynamically from Oracle and local Excel worksheets.
+Avoid hardcoding values or introducing unnecessary manual dependencies.
+Maintainability and Testability:
+
+Ensure that unit tests validate functionality with mock setups while adhering to real-world behavior.
+Use clean and clear test scenarios that reflect dynamic data usage.
+Let’s correct the implementation while staying faithful to these established ideas.
