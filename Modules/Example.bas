@@ -27,3 +27,39 @@ Public Sub Test_ConfigManager()
     Debug.Assert fieldOptions.Exists("ID")    ' Check local Config variable
     Debug.Print "Test_ConfigManager passed."
 End Sub
+
+
+' TestModule.bas
+Option Explicit
+
+Public Sub TestOracleConnection()
+    Dim dbManager As DatabaseManager
+    Dim rs As ADODB.Recordset
+    Dim sqlQuery As String
+    
+    ' Define your SQL query to pull one record
+    sqlQuery = "SELECT * FROM YOUR_TABLE_NAME WHERE ID = '124'"
+    
+    ' Initialize DatabaseManager
+    Set dbManager = New DatabaseManager
+    
+    ' Open database connection
+    If dbManager.OpenConnectionWithCredentials("password") Then
+        ' Execute SQL query and get recordset
+        Set rs = dbManager.ExecuteCommandQuery(dbManager.CreateCommand(sqlQuery, dbManager.GetConnection))
+        
+        ' Print the result to the Immediate Window
+        If Not rs.EOF Then
+            Debug.Print "ID: " & rs.Fields("ID").Value
+            Debug.Print "OtherField: " & rs.Fields("OtherField").Value ' Replace with actual field names
+        Else
+            Debug.Print "No records found."
+        End If
+        
+        ' Close recordset and connection
+        rs.Close
+        dbManager.CloseConnection
+    Else
+        Debug.Print "Connection failed."
+    End If
+End Sub
