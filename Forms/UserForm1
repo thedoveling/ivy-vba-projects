@@ -1,8 +1,11 @@
 ' UserForm1
 Option Explicit
 
-Private Sub CommandButtonOK_Click()
-    ' Validate input
+Public Sub CommandButtonOK_Click()
+    ' Get user credentials from the UserForm
+    userID = Trim(UserForm1.UserIDTextBox.Value)
+    password = Trim(UserForm1.PasswordTextBox.Value)
+
     Call UserFormModule.LoginUser
 End Sub
 

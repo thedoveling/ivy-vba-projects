@@ -2,32 +2,50 @@
 Option Explicit
 
 Private con As ADODB.Connection
-Private encryptedPassword As String
-Private userID As String
+Private isConnected As Boolean
 
-' Sets the user credentials and encrypts the password.
-Public Sub SetCredentials(ByVal user As String, ByVal pass As String)
-    userID = user
-    encryptedPassword = Encrypt(pass) ' Store encrypted password
-End Sub
-
-' Decrypts the stored password for use.
-Private Function GetDecryptedPassword() As String
-    GetDecryptedPassword = Decrypt(encryptedPassword)
-End Function
-
-' Opens a database connection using the stored credentials.
+' Opens a database connection using the globally stored credentials.
 Public Function OpenConnection() As Boolean
     On Error GoTo ConnectionError
     Dim connectionString As String
-    Dim password As String
 
-    ' Ensure credentials are set
-    If userID = vbNullString Or encryptedPassword = vbNullString Then
-        MsgBox "Error: User credentials are not set.", vbCritical
+    ' Ensure global credentials are set
+    If UserID = vbNullString Or Password = vbNullString Then
+        MsgBox "Error: User credentials are not set. Please set them first.", vbCritical
         OpenConnection = False
         Exit Function
     End If
+
+    ' Build and open the connection
+    connectionString = "Provider=ORAOLEDB.ORACLE;" & _
+                       "Data Source=DEVVV;" & _
+                       "User Id=" & UserID & ";" & _
+                       "Password=" & Password & ";"
+    Set con = New ADODB.Connection
+    con.ConnectionString = connectionString
+    con.Open
+
+    isConnected = True
+    OpenConnection = True
+    Exit Function
+
+ConnectionError:
+    MsgBox "Error opening connection: " & Err.Description, vbCritical
+    If Not con Is Nothing Then
+        If con.State = adStateOpen Then con.Close
+        Set con = Nothing
+    End If
+    isConnected = False
+    OpenConnection = False
+End Function
+
+' Checks if the connection is active.
+Public Function IsConnected() As Boolean
+    On Error Resume Next
+    IsConnected = Not con Is Nothing And con.State = adStateOpen
+End Function
+
+
 
     ' Decrypt password
     password = GetDecryptedPassword()
@@ -67,23 +85,6 @@ Public Sub CloseConnection()
     End If
 End Sub
 
-' Encrypts a string (simple XOR encryption).
-Private Function Encrypt(input As String) As String
-    Dim i As Long
-    Dim result As String
-    Dim key As Byte
-    key = 42 ' Simple XOR key
-
-    For i = 1 To Len(input)
-        result = result & Chr(Asc(Mid(input, i, 1)) Xor key)
-    Next i
-    Encrypt = result
-End Function
-
-' Decrypts a string (simple XOR decryption).
-Private Function Decrypt(input As String) As String
-    Decrypt = Encrypt(input) ' XOR is symmetric
-End Function
 
 
 ' Returns the active connection.

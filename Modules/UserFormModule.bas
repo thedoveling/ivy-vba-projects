@@ -9,16 +9,8 @@ End Sub
 Sub LoginUser()
     Dim dbManager As DatabaseManager
     Set dbManager = New DatabaseManager
-
-    ' Prompt user for credentials (e.g., from a UserForm)
-    Dim userID As String, password As String
-    ' Get user credentials from the UserForm
-    userID = Trim(UserForm1.UserIDTextBox.Value)
-    password = Trim(UserForm1.PasswordTextBox.Value)
     
-
-    ' Set credentials and open the connection
-    dbManager.SetCredentials userID, password
+    ' Open the connection and check if login is successful
     If dbManager.OpenConnection Then
         MsgBox "Login successful!", vbInformation
         ' Close the UserForm
