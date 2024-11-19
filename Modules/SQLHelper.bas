@@ -1,34 +1,37 @@
 ' SQLHelper.bas
-Option Explicit
 
 ' Builds a metadata query to fetch column names and data types.
 ' @param tableName - The name of the table to fetch metadata for
 ' @param owners - Optional, a comma-separated string of schema owners (default: "ZZZHSO")
 ' @return - A SQL query string
 Option Explicit
-Option Explicit
 
 ' Builds a metadata query to fetch column names and data types.
-Public Function BuildMetadataQuery(tableName As String, Optional owners As String = "ZZZHSO") As String
-    Dim ownerFilter As String
-    Dim ownerArray() As String
+Public Function BuildMetadataQuery(tableName As String, schema As String) As String
+    Dim schemaFilter As String
+    Dim schemaArray() As String
     Dim i As Long
 
-    ownerArray = Split(owners, ",")
+    schemaArray = Split(schema, ",")
 
-    For i = LBound(ownerArray) To UBound(ownerArray)
-        If i > LBound(ownerArray) Then ownerFilter = ownerFilter & ", "
-        ownerFilter = ownerFilter & "'" & Trim(ownerArray(i)) & "'"
+    For i = LBound(schemaArray) To UBound(schemaArray)
+        If i > LBound(schemaArray) Then schemaFilter = schemaFilter & ", "
+        schemaFilter = schemaFilter & "'" & Trim(schemaArray(i)) & "'"
     Next i
 
     BuildMetadataQuery = "SELECT COLUMN_NAME, DATA_TYPE FROM ALL_TAB_COLUMNS " & _
-                         "WHERE OWNER IN (" & ownerFilter & ") " & _
+                         "WHERE OWNER IN (" & UCase(schemaFilter) & ") " & _
                          "AND TABLE_NAME = '" & UCase(tableName) & "'"
 End Function
 
 ' Builds a SELECT * query for a table.
-Public Function BuildSelectQuery(tableName As String) As String
-    BuildSelectQuery = "SELECT * FROM " & UCase(tableName)
+Public Function BuildSelectQuery(tableName As String, schema As String) As String
+    Dim fullTableName As String
+    
+    fullTableName = schema & "." & tableName
+
+    ' Build the query with full table name
+    BuildSelectQuery = "SELECT * FROM " & fullTableName
 End Function
 
 ' Builds a SELECT query with filters.
@@ -91,3 +94,4 @@ Public Function BuildJoinQuery(baseTable As String, joins As Object, columns As 
     ' Build the query
     BuildJoinQuery = "SELECT " & columnList & " FROM " & baseTable & joinClause & filterClause
 End Function
+

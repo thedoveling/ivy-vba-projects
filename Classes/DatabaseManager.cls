@@ -4,8 +4,7 @@
 Option Explicit
 
 Private con As ADODB.Connection
-Private userID As String
-Private password As String
+
 Private transactionInProgress As Boolean
 
 '@summary Sets the credentials for the database connection.
@@ -58,6 +57,50 @@ Public Sub CloseConnection()
     End If
 End Sub
 
+' Returns the active connection
+Public Function GetConnection() As ADODB.Connection
+    If Not IsConnected Then
+        MsgBox "Connection is not open.", vbCritical
+        Set GetConnection = Nothing
+    Else
+        Set GetConnection = con
+    End If
+End Function
+
+'@summary Executes a SQL query and returns the result as a recordset.
+'@param sqlQuery The SQL query to execute.
+'@returns The result of the query as a recordset.
+Public Function ExecuteQuery(sqlQuery As String) As ADODB.Recordset
+    Dim cmd As ADODB.Command, rs As ADODB.Recordset
+    On Error GoTo QueryError
+
+    Set cmd = CreateCommand(sqlQuery, GetConnection)
+    Set rs = New ADODB.Recordset
+    rs.Open cmd, , adOpenStatic, adLockReadOnly
+
+    Set ExecuteQuery = rs
+    Exit Function
+
+QueryError:
+    MsgBox "Error executing query: " & Err.Description, vbCritical
+    Set ExecuteQuery = Nothing
+End Function
+
+'@summary Creates a command object with the specified SQL text and connection.
+'@param sqlText The SQL text for the command.
+'@param connection The database connection to use.
+'@returns The created command object.
+Private Function CreateCommand(sqlText As String, connection As ADODB.Connection) As ADODB.Command
+    Dim cmd As ADODB.Command
+    Set cmd = New ADODB.Command
+    cmd.ActiveConnection = connection
+    cmd.CommandText = sqlText
+    cmd.CommandType = adCmdText
+    Set CreateCommand = cmd
+End Function
+
+
+'' Transaction process - not yet in use
 '@summary Begins a database transaction.
 Public Sub BeginTransaction()
     If IsConnected And Not transactionInProgress Then
@@ -82,34 +125,3 @@ Public Sub RollbackTransaction()
         transactionInProgress = False
     End If
 End Sub
-
-'@summary Executes a SQL query and returns the result as a recordset.
-'@param sqlQuery The SQL query to execute.
-'@returns The result of the query as a recordset.
-Public Function ExecuteQuery(sqlQuery As String) As ADODB.Recordset
-    Dim cmd As ADODB.Command, rs As ADODB.Recordset
-    On Error GoTo QueryError
-
-    Set rs = New ADODB.Recordset
-    rs.Open cmd, , adOpenStatic, adLockReadOnly
-
-    Set ExecuteQuery = rs
-    Exit Function
-
-QueryError:
-    MsgBox "Error executing query: " & Err.Description, vbCritical
-    Set ExecuteQuery = Nothing
-End Function
-
-'@summary Creates a command object with the specified SQL text and connection.
-'@param sqlText The SQL text for the command.
-'@param connection The database connection to use.
-'@returns The created command object.
-Private Function CreateCommand(sqlText As String, connection As ADODB.Connection) As ADODB.Command
-    Dim cmd As ADODB.Command
-    Set cmd = New ADODB.Command
-    cmd.ActiveConnection = connection
-    cmd.CommandText = sqlText
-    cmd.CommandType = adCmdText
-    Set CreateCommand = cmd
-End Function
