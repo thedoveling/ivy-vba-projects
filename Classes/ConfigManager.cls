@@ -10,16 +10,25 @@ Private dbManager As DatabaseManager
 ' @param dbManager - The database manager instance.
 
 Public Sub Initialize(tableName As String, dbManager As DatabaseManager, Optional skipMetadata As Boolean = False)
-    If Not dbManager.IsConnected Then Err.Raise vbObjectError + 1, "ConfigManager", "Database connection is not open."
+        ' Validate DatabaseManager instance
+    If dbManager Is Nothing Then
+        Err.Raise vbObjectError + 1, "ConfigManager", "DatabaseManager instance is not set."
+    End If
+    If Not dbManager.IsConnected Then 
+        Err.Raise vbObjectError + 1, "ConfigManager", "Database connection is not open."
+    End If
 
-    Set Me.dbManager = dbManager
-    If Not skipMetadata Then LoadConfigurationsFromOracle tableName
+    
+    If Not skipMetadata Then 
+        Call LoadConfigurationsFromOracle (tableName, dbManager)
+    End If
 End Sub
 
 ' Loads column mappings and data validation configurations from the database.
-Private Sub LoadConfigurationsFromOracle(tableName As String)
+Private Sub LoadConfigurationsFromOracle(tableName As StringdbManager As DatabaseManager, )
     Dim rs As ADODB.Recordset
-    Set rs = dbManager.ExecuteQuery(SQLHelper.BuildMetadataQuery(tableName))
+    ' NEed to define metadataquery
+    Set rs = dbManager.ExecuteQuery(metadataquery)
 
     Set columnMappings = New Scripting.Dictionary
     Set dataValidationConfigs = New Scripting.Dictionary

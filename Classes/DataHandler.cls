@@ -4,14 +4,13 @@ Option Explicit
 ' Populates data from a recordset into a worksheet.
 ''' <param name="rs">The ADODB.Recordset containing the data.</param>
 ''' <param name="useMetadata">Optional. Specifies whether to use metadata for populating headers. Default is True.</param>
-Public Sub PopulateData(rs As ADODB.Recordset, tableName As String, Optional useMetadata As Boolean = True)
-    Dim configManager As ConfigManager, targetSheet As Worksheet
+Public Sub PopulateData(rs As ADODB.Recordset, useMetadata As Boolean, Optional configManager As ConfigManager = Nothing)
+    Dim targetSheet As Worksheet
     Dim lastRow As Long, lastCol As Long, tblRange As Range, tbl As ListObject
 
-'    Initialize ConfigManager if using metadata
-    If useMetadata Then
-        Set configManager = New ConfigManager
-        configManager.Initialize tableName, dbManager
+    ' Ensure metadata dependencies are provided when required
+    If useMetadata And configManager Is Nothing Then
+        Err.Raise vbObjectError + 1, "DataHandler", "ConfigManager must be provided when useMetadata is True."
     End If
 
 '   Clear existing data in the target sheet
