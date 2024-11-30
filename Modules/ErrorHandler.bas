@@ -1,3 +1,4 @@
+' ErrorHandler.bas
 Option Explicit
 
 Private Const LOG_FILE As String = "C:\Temp\ErrorLog.txt" ' Change path as required
